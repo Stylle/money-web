@@ -42,7 +42,7 @@
 
 1. 数据可行性：公开行情/搜索/RSS 真网络探测，保存 `source-probe.json`，明确延迟和授权限制。
 2. 本地闭环：实际打开网页检查搜索订阅、持仓、设置；后端规则边界测试及前端生产构建。
-3. 容器：安装 Docker 后运行 Compose 集成检查、PostgreSQL 恢复测试及 amd64/arm64 镜像构建。
+3. 容器：已通过 WSL Docker、Compose PostgreSQL/Web/worker、amd64/arm64 镜像及发布核验；完整 PostgreSQL 备份恢复仍待实操。
 4. 试运行：连续交易日核对开盘日报、通知到达率、行情延迟和失败恢复，再决定是否启用建议。
 
-当前代码是 v0.1 可运行基础版本；容器运行验证、真实 AI/Webhook 联调和连续交易日观察需对应环境与配置。
+当前 v0.1.0 镜像已发布至 stylle/money-web，支持 amd64/arm64；真实 AI/Webhook 联调、完整数据库备份恢复及连续交易日观察仍需对应配置与运行时间。

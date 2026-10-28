@@ -7,6 +7,9 @@
 - amd64 非 root、只读、禁网容器内后端 74 项回归测试通过。
 - 独立随机命名的 Compose PostgreSQL / Web / worker 全部健康；鉴权、首页、四市场、加密自选 CRUD、100 份持仓不变、设置和持仓重启持久化通过。测试完成只清理该临时栈的容器与卷。
 - 本地 Windows 预览与用户自选、持仓保持运行和原状。
+- 最终镜像来源 ce5c6f9，前端使用构建机原生架构编译，pip 跳过构建期字节码预编译；应用源码和依赖版本未改变。最终镜像 Linux 74 项回归再次通过，ARM aarch64 离线检查通过：非 root、首页、四市场、资讯目录、空自选、现金 100 份、AI 默认关闭。
+- 发布后分别从 Docker Hub 回拉 amd64 / arm64，两个架构的离线运行检查再次通过；匿名读取清单通过，临时 PAT 登录已清理。
+- Docker Hub 三标签 0.1.0 / latest / ce5c6f9 已推送并验证同一摘要，均含 linux/amd64 与 linux/arm64。摘要：`sha256:df5c1513ff4007b33dad41dafa8e2b0591c2b9c5e0b0352e7366526ffae58b08`；完整记录见 docker-release.json。
 
 
 
@@ -57,7 +60,7 @@
 
 ## 尚未执行
 
-- Docker 镜像构建、Compose 启动、PostgreSQL 容器集成、amd64/arm64 运行验证、Docker Hub 推送：当前本机没有 Docker，用户要求先写代码。
+- 初始阶段尚未检查到管理员用户的 WSL Docker；这些构建、Compose、PostgreSQL 容器集成、amd64/arm64 及推送检查已在本页最新 WSL Docker 验收中完成。
 - GitHub 远端推送和 Actions 执行：未指定远端，CLI 的现有 GitHub 登录无效；当前只做本地 Git 提交。
 - 真实 AI 模型调用、真实 Webhook 接收端联调：没有配置用户密钥和目标地址。
 - PostgreSQL 备份恢复实操、连续交易日通知验收、策略收益回测：需部署环境和运行时间。
