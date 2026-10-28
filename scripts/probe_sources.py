@@ -10,10 +10,11 @@ from app.config import DEFAULTS
 from app.news import parse_feed
 from app.security import request, safe_error
 from app.markets import market_state
-from app.db import utcnow
+from app.db import utcnow, initialize
 
 
 async def main():
+    initialize()
     config = dict(DEFAULTS)
     result = {'checked_at': utcnow().isoformat(), 'quotes': [], 'feeds': [], 'search': [], 'calendars': []}
     for market, symbol in [('CN','510300.SS'),('HK','0700.HK'),('US','QQQ')]:

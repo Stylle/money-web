@@ -9,10 +9,11 @@ DEFAULTS = {
     'ai_interface': 'chat', 'ai_daily_limit': 10,
     'webhook_url': '', 'webhook_secret': '', 'webhook_authorization': '',
     'notify_daily': True, 'notify_alerts': True,
-    'markets': ['CN', 'HK', 'US'], 'quiet_start': '', 'quiet_end': '',
+    'markets': ['CN', 'HK', 'US', 'CRYPTO'], 'quiet_start': '', 'quiet_end': '',
     'keywords': ['纳斯达克', '红利', '利率', '科技', 'Nasdaq', 'Federal Reserve'],
     'feeds': [{'name': '美联储 · 官方公告', 'url': 'https://www.federalreserve.gov/feeds/press_all.xml'}],
-    'provider': 'yahoo', 'provider_base_url': '', 'provider_key': '',
+    'news_sources': ['cls','stcn','jin10','wallstreetcn','tradingview','seekingalpha','cointelegraph','coindesk'],
+    'provider': 'auto', 'provider_base_url': '', 'provider_key': '',
 }
 SECRETS = {'ai_key', 'webhook_secret', 'webhook_authorization', 'provider_key'}
 

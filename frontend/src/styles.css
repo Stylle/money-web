@@ -1,3 +1,132 @@
+.source-panel {
+  margin: 18px 0;
+  border: 1px solid #e4eadf;
+  border-radius: 8px;
+  padding: 15px;
+  background: #f8faf5;
+}
+.source-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.source-panel-heading > button:first-child {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  text-align: left;
+}
+.source-panel-heading span {
+  font-size: 9px;
+  font-weight: 400;
+  color: #95a28a;
+}
+.source-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.source-item {
+  padding: 13px;
+  background: white;
+  border: 1px solid #e6ecdf;
+  border-radius: 6px;
+}
+.source-item-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.source-item-top input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.source-item b {
+  font-size: 11px;
+  font-weight: 500;
+}
+.source-item .pill {
+  margin-left: auto;
+  font-size: 8px;
+  padding: 4px 6px;
+}
+.source-item small {
+  font-size: 9px;
+  color: #98a58e;
+  display: block;
+  line-height: 1.8;
+}
+.source-item p {
+  font-size: 10px;
+  line-height: 1.9;
+  margin: 8px 0;
+  color: #8c9b80;
+}
+.source-item p.source-error {
+  color: #b38c60;
+}
+.source-item a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: #6a8a59;
+  margin-top: 8px;
+}
+.quote-source-list {
+  margin-top: 18px;
+  border-top: 1px solid #e2ead9;
+  padding-top: 15px;
+}
+.quote-source-list h3 {
+  font-size: 13px;
+  font-weight: 500;
+}
+.quote-source-list p {
+  font-size: 10px;
+  line-height: 1.9;
+  color: #8f9f80;
+}
+.quote-source-list > div {
+  padding: 12px 0;
+  border-bottom: 1px solid #e8ecdf;
+}
+.quote-source-list b {
+  font-size: 11px;
+  font-weight: 500;
+}
+.quote-source-list > div > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 9px;
+  color: #8b9f79;
+  margin: 8px 0;
+}
+.quote-source-list small {
+  font-size: 9px;
+  line-height: 1.8;
+  color: #a2ad96;
+}
+@media (max-width: 760px) {
+  .source-grid {
+    grid-template-columns: 1fr;
+  }
+  .source-panel {
+    padding: 12px;
+  }
+  .source-panel-heading {
+    align-items: flex-start;
+  }
+  .source-panel-heading > button:last-child {
+    white-space: nowrap;
+  }
+}
 .connection-failure {
   margin: 30px auto;
   max-width: 640px;
@@ -441,7 +570,7 @@ small {
 }
 .market-strip {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 24px;
   border: 1px solid var(--border);
   background: #fff;
@@ -457,6 +586,11 @@ small {
 }
 .market-strip > div:last-child {
   border: 0;
+}
+.market-emblem.CRYPTO { background: #fff2db; color: #bb811f; font-size: 20px; }
+@media (max-width: 1500px) {
+  .market-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 22px; }
+  .market-strip > div:nth-child(2) { border-right: 0; }
 }
 .market-emblem {
   width: 34px;

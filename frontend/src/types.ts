@@ -1,4 +1,4 @@
-export type Market = "CN" | "HK" | "US";
+export type Market = "CN" | "HK" | "US" | "CRYPTO";
 export type Bar = {
   time: string;
   open: number;
@@ -7,15 +7,22 @@ export type Bar = {
   close: number;
   volume: number;
 };
+export type PricePoint = Pick<Bar, "time" | "close"> & { volume?: number };
 export type Quote = {
   price?: number;
   previous_close?: number;
   change_pct?: number;
   currency?: string;
+  change_basis?: string;
+  venue?: string;
+  pair?: string;
   as_of?: string;
   source?: string;
+  history_source?: string;
+  intraday_source?: string;
+  provider_attempts?: { provider: string; status: string; error?: string }[];
   delay_note?: string;
-  intraday?: Bar[];
+  intraday?: PricePoint[];
   history?: Bar[];
 };
 export type Signal = {
@@ -134,6 +141,7 @@ export type Settings = {
   quiet_end: string;
   keywords: string[];
   feeds: { name: string; url: string }[];
+  news_sources: string[];
   provider: string;
   provider_base_url: string;
   provider_key?: string;

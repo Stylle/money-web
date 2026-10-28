@@ -1,6 +1,30 @@
 # 数据源与接口协议
 
-## 当前默认源
+## 当前默认源（多源自动切换）
+
+A 股优先腾讯，失败或延迟时尝试东方财富、Yahoo 主节点、Yahoo 备用节点；港美股使用腾讯和 Yahoo。主备 Yahoo 属于同一家服务，不作为两家独立机构计算。东方财富目前仅启用已验证的 A 股映射；港美股映射未通过完整时效验证。
+端点不是厂商授权实时 API，不构成长期稳定性保证。失败会记录、连续网络异常后退避，恢复后自动重试。数据时间失效时暂停信号。
+腾讯分钟端点返回的是价格线点，不捏造 OHLC；日线 OHLC 独立来自完整同源复权序列。美股 ETF 的腾讯历史可能不足，使用 Yahoo 整段补充并标注，绝不逐行拼接不同复权口径。
+
+## 内置资讯来源
+
+| 来源 | 接入方式 | 当前边界 |
+|---|---|---|
+| 财联社 | 公开移动页嵌入的数据 | 只取标题、原文链接、发布时点；页面变化报错 |
+| 证券时报 | 公开首页标题索引 | 原文阅读；未知发布时间不参与 AI 今日证据 |
+| 金十数据 | xnews 公开市场参考标题索引 | 不含付费/VIP 正文或旧免费快讯接口 |
+| 华尔街见闻 | 网站公开快讯端点 | 标题或明确标为摘录的短句，不抓付费内容 |
+| 雪球 | 来源目录 / 原站入口 | 当前返回访问验证页，需授权适配器，未启用抓取 |
+| TradingView | 公开 RSS 观点流 | 是社区观点，不是经过核实的新闻事实，也不是行情数据 API |
+| Seeking Alpha | 官方市场快讯 RSS | 标题、链接、日期；不读取付费文章正文 |
+
+六个可获取的来源默认启用，保留用户 RSS，不覆盖原设置。不同来源并行刷新，单源失败不影响其他来源。重复标题去重；无日期标题按稳定 URL 标识去重，不能把抓取时间当作发布时间。
+内置源按 5～10 分钟刷新、RSS 按 30 分钟；状态面板显示实际条数、最近尝试/成功时间和访问限制。公开网页变化或拒绝访问时不显示虚假的“健康”。
+
+官方说明：[Seeking Alpha RSS 目录](https://about.seekingalpha.com/feeds)、[TradingView 不提供用户数据提取 API 的说明](https://www.tradingview.com/support/solutions/43000474413-i-need-access-to-your-api-in-order-to-get-data-or-indicator-values/)、[金十引用服务说明](https://south.jin10.com/example/websiteiframe.html)。
+请按来源条款在个人空间内使用标题索引；付费、授权、登录或访问验证内容没有被绕过，也不能因为公开端点能访问就声称取得转载/分发授权。
+
+## Yahoo 与外部 RSS
 
 - 行情/搜索：Yahoo Finance 实验性非官方接口。并非获授权实时行情服务，不保证长期可用，可能限流、延迟、拒绝请求；部署者需自行确认使用条款和适用授权。
 - 日线取最近六个月，OHLC 按上游 adjclose 比例调整，成交量保留上游值。用于观察指标，不是完整回测或券商成交核算数据。
@@ -8,7 +32,7 @@
 - RSS 默认使用 [美联储官方公告](https://www.federalreserve.gov/feeds/press_all.xml)，可在设置中添加自己有权使用的公开 RSS / Atom。
 - [官方 RSS 说明](https://www.federalreserve.gov/feeds/feeds.htm)。存储标题、时间、链接、来源和关键词标签，不抓取新闻全文。
 
-2026-10-28 的真网络结果见 `source-probe.json`：三市场各一标的、在线搜索、官方 RSS 均取得响应。A/H 报价约延迟 15 分钟，因此当时**不满足五分钟内报价要求，不会生成盘中操作建议或阈值推送**。这不是实时能力验收。
+早期单源真网络结果见 `source-probe.json`。扩展后的逐来源结果见 `integration-check.json`，A 股新源的时效较好，港股仍可能延迟；**未达五分钟要求时不会生成盘中操作建议或阈值推送**。单次验证不是持续可用性或授权实时能力验收。
 
 运行 `python scripts/probe_sources.py` 重新验证，结果不含 API Key，不写入用户自选和行情库。
 本机使用 Fake-IP DNS，诊断时显式信任了既定公开域名；见部署文档的 TRUSTED_EGRESS_HOSTS。默认不放开私网。
@@ -61,3 +85,14 @@ A 股日历当前按沪市共享假日日历处理，深市、北交所特有临
 调用上限按 UTC 日计算，包含连接测试及失败请求；请求成功不等于建议通过约束校验。
 
 接口依据：[Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)、[Responses 迁移说明](https://developers.openai.com/api/docs/guides/migrate-to-responses)。
+
+
+## 加密现货与资讯
+
+CRYPTO 独立市场，支持 BASE-USDT / BASE-USD，展示计价币和交易所。USDT 默认 Binance 公开市场数据接口，失败尝试 Coinbase 的完全相同交易对；USD 直接 Coinbase，不用稳定币代替美元。自定义模式继续使用部署者的标准协议。当前选择腾讯/东方财富/Yahoo 只影响股票，内置加密市场独立路由。
+
+- Binance：[官方公开行情域名说明](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/market_data_only.md)，仅无需密钥的现货目录、成交和 K 线。目录过滤 SPOT / TRADING 并不表示每个标的适合投资。
+- Coinbase：[官方成交快照](https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-ticker)、[日线文档](https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-candles)。保留最近成交时间；低流动性交易对可能过期，缺少上一完整 UTC 日线时不给涨跌提醒。
+- [CoinDesk RSS](https://www.coindesk.com/arc/outboundfeeds/rss)、[Cointelegraph RSS](https://cointelegraph.com/rss)，仅公开标题、时间和原文链接；已默认启用。加密频道还匹配其他来源中的比特币、以太坊、稳定币等关键词，不使用 AI 分类。
+
+加密市场全年 7×24 小时，UTC 每日 00:00 为日线边界（北京时间 08:00）。涨跌幅是现价与上一完整 UTC 日线收盘之比，不使用滚动 24 小时统计。日报 UTC 00:30（北京时间 08:30），静默/去重/过期和五分钟时效约束仍生效。现货可以加入 100 份持仓，但不会自动为用户订阅或分配仓位。未接合约、杠杆、链上钱包、自动交易。
