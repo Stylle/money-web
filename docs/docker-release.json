@@ -1,0 +1,42 @@
+{
+  "checked_at": "2026-10-28T09:56:44.069280+00:00",
+  "image": "stylle/money-web",
+  "registry_verified": true,
+  "tags_match": true,
+  "tags": [
+    {
+      "tag": "0.1.0",
+      "digest": "sha256:df5c1513ff4007b33dad41dafa8e2b0591c2b9c5e0b0352e7366526ffae58b08",
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ]
+    },
+    {
+      "tag": "latest",
+      "digest": "sha256:df5c1513ff4007b33dad41dafa8e2b0591c2b9c5e0b0352e7366526ffae58b08",
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ]
+    },
+    {
+      "tag": "ce5c6f9",
+      "digest": "sha256:df5c1513ff4007b33dad41dafa8e2b0591c2b9c5e0b0352e7366526ffae58b08",
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ]
+    }
+  ],
+  "image_source_commit": "ce5c6f9c0bbf23ce4f9e05f4b2b212dc1f6a8578",
+  "anonymous_manifest_verified": true,
+  "temporary_credentials_removed": true,
+  "linux_backend_tests_passed": 74,
+  "postgresql_compose_passed": true,
+  "arm64_emulated_runtime_passed": true,
+  "registry_pull_runtime_passed": [
+    "linux/amd64",
+    "linux/arm64"
+  ]
+}

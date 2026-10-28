@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**代码版本：v0.1.0。Docker Hub 目标：`stylle/money-web`；本次尚未实际构建或推送镜像。**
+**代码版本：v0.1.0。镜像已发布：`stylle/money-web:0.1.0` / `latest`，支持 linux/amd64 与 linux/arm64。发布摘要见 [核验记录](docs/docker-release.json)。**
 
 ## 包含什么
 
@@ -44,14 +44,14 @@ docker compose ps
 
 默认只监听 127.0.0.1。若在 NAS / 服务器局域网访问，在 `.env` 设置 `BIND_ADDRESS=0.0.0.0`，保留强口令；公网必须通过 HTTPS 反向代理并按 [安全说明](SECURITY.md) 设置出口限制。数据库不映射宿主机端口。
 
-镜像发布后可直接：
+使用已发布镜像可直接：
 
 ```powershell
 docker compose pull
 docker compose up -d --no-build
 ```
 
-**发布前 `pull` 不能替代本地构建，也不要假定 Docker Hub 已有镜像。**
+镜像也提供源码提交号标签 `ce5c6f9`。固定版本可在 `.env` 设置 `IMAGE_TAG=0.1.0`；`latest` 会随新版本更新。
 
 三项服务均有健康检查。worker 在浏览器关闭后继续工作；宿主机关机、休眠或网络中断会影响监控。每次监控工作完成后等待 60 秒，数据量与网络延迟影响实际周期，不承诺固定分钟到达。
 
@@ -156,7 +156,7 @@ python scripts/check_integrations.py
 ```
 
 诊断结果写入 `docs/source-probe.json`；不修改用户自选或持仓，不打印密钥。依赖锁文件固定了本次验证版本。
-浏览器验收检查了首页、搜索订阅、持仓份额不平衡时禁用保存、设置页面。尚未验证实际 Docker 容器、PostgreSQL 恢复和真实 AI/Webhook。
+浏览器验收检查了首页、搜索订阅、持仓份额不平衡时禁用保存、设置页面。已验证 Linux 镜像、PostgreSQL / Web / worker、鉴权与重启持久化；ARM 使用仿真验收。PostgreSQL 备份恢复和真实 AI/Webhook 仍需部署环境验收。
 
 ## Docker Hub 发布
 
