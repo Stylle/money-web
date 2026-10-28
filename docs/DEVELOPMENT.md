@@ -29,6 +29,7 @@ cd backend
 python -m pytest -q
 cd ../frontend
 npm ci
+npm test
 npm run build
 ```
 

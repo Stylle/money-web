@@ -285,3 +285,18 @@ def test_webhook_retry_records_failure_without_leaking_url(monkeypatch):
         d=s.scalars(select(Delivery)).first()
         assert d.status=='pending' and d.attempts==1
         assert 'hidden' not in d.error
+
+
+def test_search_preserves_known_etf_name_and_market(monkeypatch):
+    import httpx
+    import app.providers as providers
+    async def remote(*args,**kwargs):
+        return httpx.Response(200,json={'quotes':[
+            {'symbol':'510300.SS','shortname':'TRUNCATED ENGLISH NAME','quoteType':'EQUITY','exchange':'SHH'},
+            {'symbol':'QQQ','shortname':'US ETF','quoteType':'ETF','exchange':'NASDAQ'},
+        ]})
+    monkeypatch.setattr(providers,'request',remote)
+    result=asyncio.run(providers.search_symbols('510300','CN',get_config()))
+    assert len(result['items'])==1
+    assert result['items'][0]['name']=='华泰柏瑞沪深300 ETF'
+    assert result['items'][0]['kind']=='etf'

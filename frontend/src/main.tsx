@@ -237,10 +237,20 @@ function App() {
     void reload();
     const id = setInterval(() => void reload(), 60000);
     const listener = () => setAuth(true);
+    const disconnected = (event: globalThis.Event) =>
+      setError((event as CustomEvent<string>).detail);
+    const connected = () => setError("");
+    const reconnect = () => void reload();
     window.addEventListener("auth-required", listener);
+    window.addEventListener("backend-unavailable", disconnected);
+    window.addEventListener("backend-connected", connected);
+    window.addEventListener("online", reconnect);
     return () => {
       clearInterval(id);
       window.removeEventListener("auth-required", listener);
+      window.removeEventListener("backend-unavailable", disconnected);
+      window.removeEventListener("backend-connected", connected);
+      window.removeEventListener("online", reconnect);
     };
   }, []);
   useEffect(() => {
@@ -427,16 +437,37 @@ function App() {
           </div>
         </header>
         {error && (
-          <div className="error-banner">
+          <div className="error-banner" role="alert">
             {error}
             <button onClick={() => void reload()}>重试</button>
           </div>
         )}
         {!d ? (
-          <div className="loading">
-            <Loader2 className="spin" />
-            正在打开观察台…
-          </div>
+          error ? (
+            <section className="card connection-failure" role="alert">
+              <CircleHelp size={28} />
+              <h2>暂时无法打开观察台</h2>
+              <p>{error}</p>
+              <p className="muted">
+                本地开发请运行 scripts/start-local.ps1；Docker 部署请检查 web
+                服务状态。
+              </p>
+              <button
+                className="primary"
+                onClick={() => {
+                  setError("");
+                  void reload();
+                }}
+              >
+                重新连接
+              </button>
+            </section>
+          ) : (
+            <div className="loading">
+              <Loader2 className="spin" />
+              正在打开观察台…
+            </div>
+          )
         ) : (
           <div className="content">
             <div className="page-heading">
@@ -1181,6 +1212,8 @@ function SearchModal({
       }[]
     >([]),
     [warning, setWarning] = useState(""),
+    [searchError, setSearchError] = useState(""),
+    [searchAttempt, setSearchAttempt] = useState(0),
     [busy, setBusy] = useState(false),
     [manual, setManual] = useState(false),
     [symbol, setSymbol] = useState(""),
@@ -1188,19 +1221,31 @@ function SearchModal({
     [kind, setKind] = useState("etf");
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+    setItems([]);
+    setWarning("");
+    setSearchError("");
+    setBusy(true);
     const timer = setTimeout(() => {
       setBusy(true);
       api<{ items: typeof items; warning?: string }>(
         "/search?market=" + market + "&q=" + encodeURIComponent(q),
+        "GET",
+        undefined,
+        { signal: controller.signal },
       )
         .then((r) => {
           if (!cancelled) {
             setItems(r.items);
             setWarning(r.warning || "");
+            setSearchError("");
           }
         })
         .catch((e) => {
-          if (!cancelled) setWarning(e.message);
+          if (!cancelled) {
+            setItems([]);
+            setSearchError(e.message);
+          }
         })
         .finally(() => {
           if (!cancelled) setBusy(false);
@@ -1208,9 +1253,10 @@ function SearchModal({
     }, 300);
     return () => {
       cancelled = true;
+      controller.abort();
       clearTimeout(timer);
     };
-  }, [q, market]);
+  }, [q, market, searchAttempt]);
   async function add(item: (typeof items)[number]) {
     setBusy(true);
     try {
@@ -1247,7 +1293,34 @@ function SearchModal({
         />
         {busy && <Loader2 size={17} className="spin" />}
       </div>
-      {warning && <p className="hint">{warning}</p>}
+      {warning && (
+        <div className="hint" role="status">
+          {warning}
+          <button
+            className="text-link"
+            onClick={() => setSearchAttempt((n) => n + 1)}
+          >
+            重试在线搜索
+          </button>
+        </div>
+      )}
+      {searchError && (
+        <div className="request-error" role="alert">
+          <b>搜索未完成</b>
+          <p>{searchError}</p>
+          <button
+            className="secondary"
+            onClick={() => setSearchAttempt((n) => n + 1)}
+          >
+            重试搜索
+          </button>
+        </div>
+      )}
+      {busy && (
+        <p className="muted" role="status">
+          正在搜索{marketName[market]}标的…
+        </p>
+      )}
       <div className="search-results">
         {items.map((item) => (
           <div key={item.symbol}>
@@ -1278,7 +1351,7 @@ function SearchModal({
             </button>
           </div>
         ))}
-        {!items.length && !busy && (
+        {!items.length && !busy && !searchError && (
           <p className="muted">没有找到结果，可尝试完整代码或手动添加。</p>
         )}
       </div>
@@ -2032,18 +2105,30 @@ function SettingsPage({
   reload: () => Promise<void>;
 }) {
   const [s, setS] = useState<Settings | null>(null),
+    [loadError, setLoadError] = useState(""),
+    [loadAttempt, setLoadAttempt] = useState(0),
     [busy, setBusy] = useState(false),
     [feedName, setFeedName] = useState(""),
     [feedUrl, setFeedUrl] = useState(""),
     [keywords, setKeywords] = useState("");
   useEffect(() => {
-    api<Settings>("/settings")
+    let cancelled = false;
+    const controller = new AbortController();
+    setLoadError("");
+    api<Settings>("/settings", "GET", undefined, { signal: controller.signal })
       .then((v) => {
+        if (cancelled) return;
         setS(v);
         setKeywords(v.keywords.join("，"));
       })
-      .catch((e) => notify(e.message));
-  }, []);
+      .catch((e) => {
+        if (!cancelled) setLoadError(e.message);
+      });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [loadAttempt]);
   const change = (key: keyof Settings, value: unknown) =>
     setS((old) => (old ? { ...old, [key]: value } : old));
   async function save() {
@@ -2081,7 +2166,20 @@ function SettingsPage({
     }
   }
   if (!s)
-    return (
+    return loadError ? (
+      <section className="card connection-failure" role="alert">
+        <CircleHelp size={28} />
+        <h2>偏好设置加载失败</h2>
+        <p>{loadError}</p>
+        <button
+          className="primary"
+          onClick={() => setLoadAttempt((n) => n + 1)}
+        >
+          重新加载设置
+        </button>
+        <p className="muted">不会覆盖你已保存的配置。</p>
+      </section>
+    ) : (
       <div className="loading">
         <Loader2 className="spin" />
         正在加载设置…

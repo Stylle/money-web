@@ -40,7 +40,9 @@ async def search_symbols(query, market, config):
         else:
             r = await request('GET', 'https://query1.finance.yahoo.com/v1/finance/search', params={'q': query, 'quotesCount': 15, 'newsCount': 0}, headers={'User-Agent': 'Mozilla/5.0'})
             remote = [{'symbol': x['symbol'], 'name': x.get('shortname') or x.get('longname') or x['symbol'], 'market': market_for(x['symbol']), 'exchange': x.get('exchange', ''), 'kind': 'etf' if x.get('quoteType') == 'ETF' else 'stock'} for x in r.json().get('quotes', []) if x.get('quoteType') in ('ETF', 'EQUITY')]
-        items = {x['symbol']: x for x in local + remote if x['market'] == market}
+        # Keep curated Chinese names and ETF classifications for known symbols;
+        # this upstream sometimes labels Chinese ETFs as EQUITY.
+        items = {x['symbol']: x for x in remote + local if x['market'] == market}
         return {'items': list(items.values()), 'source': config['provider'], 'warning': None}
     except Exception:
         return {'items': local, 'source': '内置标的目录', 'warning': '在线搜索暂不可用，可使用目录或手动添加完整代码'}
