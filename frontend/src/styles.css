@@ -1,3 +1,41 @@
+.connection-failure {
+  margin: 30px auto;
+  max-width: 640px;
+  text-align: center;
+  padding: 40px 24px;
+}
+.connection-failure > svg {
+  color: #b08b60;
+  margin-bottom: 18px;
+}
+.connection-failure h2 {
+  margin-bottom: 15px;
+}
+.connection-failure p {
+  font-size: 12px;
+  line-height: 1.9;
+  color: #829179;
+}
+.request-error {
+  border: 1px solid #f0dfcc;
+  border-radius: 7px;
+  padding: 16px;
+  background: #fcf5ec;
+  color: #a27e55;
+  margin: 15px 0;
+}
+.request-error b {
+  font-size: 12px;
+}
+.request-error p {
+  font-size: 11px;
+  line-height: 1.9;
+  margin: 8px 0 12px;
+}
+.hint .text-link {
+  display: flex;
+  margin-top: 8px;
+}
 :root {
   font-family: "DM Sans", "Segoe UI", "Microsoft YaHei", sans-serif;
   color: #263b3e;

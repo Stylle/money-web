@@ -85,6 +85,20 @@ $env:PYTHONPATH='backend'
 .\.venv\Scripts\python.exe -m app.worker
 ```
 
+Windows 持续试用可在 PowerShell 7 使用以下脚本在后台启动网页与监控，关闭当前终端后仍保持运行：
+
+```powershell
+.\scripts\start-local.ps1
+# 已有其他虚拟环境时可显式指定：
+# .\scripts\start-local.ps1 -Python E:\path\to\.venv\Scripts\python.exe
+# 受信 Fake-IP 代理环境另传 -TrustedEgressHosts 'query1.finance.yahoo.com,query2.finance.yahoo.com,www.federalreserve.gov'
+```
+
+脚本会等待健康检查、避免重复启动，并将日志和进程状态保存在忽略提交的 data 目录。
+首次显式指定的 Python 环境与受信域名会在本地记住，之后运行脚本可复用；不会记录访问口令或 API Key。
+主动停止时运行 `.\scripts\stop-local.ps1`。这些是本地后台进程，不是开机自启服务；重启电脑后需再次启动。
+如果页面显示“无法连接后端服务”，先运行启动脚本，再点击对应页面的重试按钮。偏好设置和搜索失败会显示原因，不再无限加载。
+
 API 和 worker 的工作目录、DATABASE_URL、DATA_DIR 必须一致。无 APP_TOKEN 的本地模式只接受环回请求。配置令牌时通过当前终端环境变量设置；不将密钥写入命令行参数或提交到 Git。
 
 ## 首次使用
@@ -128,6 +142,7 @@ cd backend
 python -m pytest -q
 cd ../frontend
 npm ci
+npm test
 npm run build
 cd ..
 python scripts/probe_sources.py
