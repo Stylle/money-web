@@ -1,0 +1,15 @@
+.git
+.env
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+**/dist
+**/data
+**/*.db
+**/*.log
+**/*.tsbuildinfo
+artifacts
+docs
+backend/tests
+.github
