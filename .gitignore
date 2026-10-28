@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+node_modules/
+dist/
+.env
+data/
+*.db
+*.db-shm
+*.db-wal
+*.log
+coverage/
+artifacts/
+*.tsbuildinfo
