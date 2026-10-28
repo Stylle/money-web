@@ -110,7 +110,7 @@ API 和 worker 的工作目录、DATABASE_URL、DATA_DIR 必须一致。无 APP_
 1. 搜索并订阅具体代码，点击刷新行情。查看报价来源与时间。
 2. 在持仓页配置资产和现金，合计必须为 100 份。允许添加 0 份仓位设置将来加仓上限。
 3. 设置关键词和 RSS；获取资讯。
-   内置来源已默认启用六个，来源面板显示最近成功时间、条数、失败或访问限制；内置源按 5～10 分钟、RSS 按 30 分钟刷新。发布时间未知的网页标题会明确标注，不进入 AI 的今日新闻证据。
+   内置来源已默认启用八个，来源面板显示最近成功时间、条数、失败或访问限制；内置源按 5～10 分钟、RSS 按 30 分钟刷新。发布时间未知的网页标题会明确标注，不进入 AI 的今日新闻证据。
 4. 按需开启程序策略。AI 可完全不配置；开启前填写 API/模型/密钥，保存后测试连接。
 5. 配置 Webhook，保存后测试；确认后台监控状态正常。
 6. 操作后在持仓页手动更新份额并保存。保存持仓仅是记录，不会交易。
@@ -165,6 +165,14 @@ python scripts/check_integrations.py
 ```powershell
 .\scripts\publish.ps1 -Tag 0.1.0
 ```
+
+如果 Windows 没有 docker.exe，但已有 WSL 构建环境（本机为 `wusaqi-build`），可复用 Linux 内已登录的 Docker：
+
+```powershell
+.\scripts\publish.ps1 -Tag 0.1.0 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
+```
+
+`-DockerConfig` 只传配置目录，不接收或输出 Token；登录时使用 `docker login --password-stdin`，不要把凭证放进项目或构建参数。`/run` 中的临时登录会随环境重启丢失，发布结束应清除。WSL 属于 Windows 管理员用户，受限账户看不到该发行版时需在该用户下执行。发布期间保持一个 WSL 终端打开，避免发行版空闲退出清除 `/run`。
 
 脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.1.0` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
 
