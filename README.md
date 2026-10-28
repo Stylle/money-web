@@ -1,13 +1,15 @@
 # 观澜 · Invest Watch
 
-个人自部署投资观察平台：三地市场自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
+个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
 **代码版本：v0.1.0。Docker Hub 目标：`stylle/money-web`；本次尚未实际构建或推送镜像。**
 
 ## 包含什么
 
-- A 股 / 港股 / 美股股票与场内 ETF 搜索、自选、分时与历史图表。
+- A 股 / 港股 / 美股股票与场内 ETF，以及加密现货独立搜索、自选、分时与历史图表。
+- 加密现货支持明确的 BTC-USDT / ETH-USD 交易对、Binance / Coinbase 同交易对切换、7×24 监控、UTC 日线及北京时间 08:30 日报。
 - RSS/Atom 新闻源、标题去重、关键词方向订阅。新闻不调用 AI。
+- 内置财联社、证券时报、金十数据公开市场参考、华尔街见闻、TradingView 社区观点、Seeking Alpha、CoinDesk、Cointelegraph；雪球列为需授权来源，显示实际状态。
 - 100 份持仓，现金/目标/仓位上限、单次调整限制；不存总资金金额。
 - MA20/MA60、RSI、MACD、ATR、历史量比，多条件程序观察；AI 与程序模式独立开关。
 - 开盘后 30 分钟日报、盘中较昨收涨跌阈值、三市场日历、美股夏令时、静默/去重/重试/过期控制。
@@ -19,7 +21,9 @@
 
 ## 先了解限制
 
-默认 Yahoo 是实验性非官方行情源。2026-10-28 的实测中，三市场均能取到数据，但 A/H 报价约延迟 15 分钟，不能作为可靠实时预警源。系统要求报价在交易时段内且新于五分钟，达不到时只展示数据、不推操作提示。
+默认采用多源自动切换：A 股按腾讯、东方财富、Yahoo 主备节点依次尝试；港美股使用腾讯与 Yahoo。来源都是公开网站端点，没有持续可用性承诺。2026-10-28 实测中腾讯/东方财富的 A 股报价较新，港股仍有延迟，美股部分图表通过 Yahoo 补充；详见 docs/integration-check.json。
+加密资讯有独立频道；CoinDesk / Cointelegraph 提供公开 RSS。加密涨跌幅相对上一 UTC 日收盘，不是滚动 24 小时；USD 和 USDT 分开标识。
+系统要求报价在交易时段内且新于五分钟，达不到时只展示数据、不推操作提示。旧缓存不会被标成实时；报价、日线、分时分别标注来源，日线复权序列不会逐行混用。
 需要盘中及时提醒，请接入符合授权和时效要求的数据服务，标准协议见 [数据源文档](docs/DATA_SOURCES.md)。
 
 程序规则通过了业务边界测试，**未完成完整策略回测、连续交易日试运行，不代表盈利有效**。AI 与 Webhook 的真实账号联调需要你的配置。未接入自动交易。ETF 重叠分析、场外基金、复杂技术事件通知等后续范围见 [开发计划](docs/PLAN.md)。
@@ -57,7 +61,7 @@ docker compose up -d --no-build
 如本机代理使用 198.18.0.0/15 Fake-IP，可在 `.env` 精确列出信任的公开域名：
 
 ```dotenv
-TRUSTED_EGRESS_HOSTS=query1.finance.yahoo.com,query2.finance.yahoo.com,www.federalreserve.gov
+TRUSTED_EGRESS_HOSTS=query1.finance.yahoo.com,query2.finance.yahoo.com,qt.gtimg.cn,web.ifzq.gtimg.cn,push2.eastmoney.com,push2his.eastmoney.com,m.cls.cn,www.cls.cn,www.stcn.com,xnews.jin10.com,api-one.wallstcn.com,www.tradingview.com,seekingalpha.com,www.federalreserve.gov,data-api.binance.vision,api.exchange.coinbase.com,www.coindesk.com,cointelegraph.com
 ```
 
 这只豁免这些域名的 Fake-IP 地址；不放开任意私网。内网 AI 服务需部署者明确开启 `ALLOW_PRIVATE_ENDPOINTS=true`，并自行设置出口隔离。
@@ -106,6 +110,7 @@ API 和 worker 的工作目录、DATABASE_URL、DATA_DIR 必须一致。无 APP_
 1. 搜索并订阅具体代码，点击刷新行情。查看报价来源与时间。
 2. 在持仓页配置资产和现金，合计必须为 100 份。允许添加 0 份仓位设置将来加仓上限。
 3. 设置关键词和 RSS；获取资讯。
+   内置来源已默认启用六个，来源面板显示最近成功时间、条数、失败或访问限制；内置源按 5～10 分钟、RSS 按 30 分钟刷新。发布时间未知的网页标题会明确标注，不进入 AI 的今日新闻证据。
 4. 按需开启程序策略。AI 可完全不配置；开启前填写 API/模型/密钥，保存后测试连接。
 5. 配置 Webhook，保存后测试；确认后台监控状态正常。
 6. 操作后在持仓页手动更新份额并保存。保存持仓仅是记录，不会交易。
@@ -146,6 +151,8 @@ npm test
 npm run build
 cd ..
 python scripts/probe_sources.py
+# 扩展来源逐项诊断，只写状态与诊断文件，不修改持仓/自选：
+python scripts/check_integrations.py
 ```
 
 诊断结果写入 `docs/source-probe.json`；不修改用户自选或持仓，不打印密钥。依赖锁文件固定了本次验证版本。

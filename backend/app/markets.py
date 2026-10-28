@@ -8,6 +8,7 @@ MARKETS = {
     'CN': {'name': 'A 股', 'tz': 'Asia/Shanghai', 'calendar': 'XSHG'},
     'HK': {'name': '港股', 'tz': 'Asia/Hong_Kong', 'calendar': 'XHKG'},
     'US': {'name': '美股', 'tz': 'America/New_York', 'calendar': 'XNYS'},
+    'CRYPTO': {'name': '加密货币', 'tz': 'UTC', 'calendar': None},
 }
 
 
@@ -22,6 +23,12 @@ def market_state(market, now=None):
     now = now or datetime.now(timezone.utc)
     local = now.astimezone(ZoneInfo(MARKETS[market]['tz']))
     result = {**MARKETS[market], 'market': market, 'date': local.date().isoformat(), 'is_open': False, 'status': 'closed', 'daily_due': False}
+    if market == 'CRYPTO':
+        opened = local.replace(hour=0, minute=0, second=0, microsecond=0)
+        due = opened + timedelta(minutes=30)
+        return {**result, 'is_open': True, 'status': 'open', 'open_at': opened.isoformat(),
+                'close_at': (opened+timedelta(days=1)).isoformat(), 'daily_at': due.isoformat(),
+                'daily_due': due <= now < due+timedelta(minutes=15)}
     try:
         cal = calendar(market, local.year)
         day = pd.Timestamp(local.date())
@@ -56,8 +63,7 @@ def valid_daily_history(history, market, now=None):
         return False
     try:
         local = now.astimezone(ZoneInfo(MARKETS[market]['tz']))
-        cal = calendar(market, local.year)
-        expected = cal.previous_session(pd.Timestamp(local.date())).date()
+        expected = local.date()-timedelta(days=1) if market == 'CRYPTO' else calendar(market, local.year).previous_session(pd.Timestamp(local.date())).date()
         dates = [datetime.fromisoformat(b['time']).astimezone(ZoneInfo(MARKETS[market]['tz'])).date() for b in history]
         return dates[-1] == expected and all(d < local.date() for d in dates)
     except Exception:

@@ -8,8 +8,8 @@ from urllib.parse import urlsplit
 from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import select, update, func
-from .db import Article, Config, Delivery, Event, Portfolio, Session, Watch, initialize, utcnow
+from sqlalchemy import select, update, func, or_
+from .db import Article, Config, Delivery, Event, Portfolio, Session, Watch, SourceHealth, initialize, utcnow
 from .config import get_config, save_config, cipher
 from .schemas import PortfolioInput, SettingsInput, WatchInput
 from .providers import search_symbols
@@ -70,7 +70,7 @@ def dashboard():
         signals = analyze_all(watches, p, config['strategy_enabled'])
         events = s.scalars(select(Event).order_by(Event.created.desc()).limit(15)).all()
         heartbeat = s.get(Config, 'worker_heartbeat')
-        result = {'watchlist': [], 'markets': [market_state(m) for m in ('CN', 'HK', 'US')], 'portfolio': p,
+        result = {'watchlist': [], 'markets': [market_state(m) for m in ('CN', 'HK', 'US', 'CRYPTO')], 'portfolio': p,
                   'events': [event_data(e) for e in events], 'worker_heartbeat': heartbeat.value if heartbeat else None,
                   'mode': {'ai': config['ai_enabled'], 'strategy': config['strategy_enabled']}, 'keywords': config['keywords']}
         for w in watches:
@@ -81,7 +81,7 @@ def dashboard():
 
 
 @app.get('/api/search')
-async def search(q: str = Query(default='', max_length=80), market: str = Query(pattern='^(CN|HK|US)$')):
+async def search(q: str = Query(default='', max_length=80), market: str = Query(pattern='^(CN|HK|US|CRYPTO)$')):
     return await search_symbols(q.strip(), market, get_config())
 
 
@@ -155,10 +155,15 @@ def put_portfolio(data: PortfolioInput):
 
 
 @app.get('/api/news')
-def news(q: str = Query(default='', max_length=100), subscribed: bool = False, symbol: str = Query(default='', max_length=40)):
+def news(q: str = Query(default='', max_length=100), subscribed: bool = False, symbol: str = Query(default='', max_length=40), topic: str = Query(default='',pattern='^$|^crypto$')):
     config = get_config()
     with Session() as s:
-        items = s.scalars(select(Article).order_by(Article.published.desc(), Article.collected.desc()).limit(500)).all()
+        query = select(Article)
+        if topic == 'crypto':
+            terms = ('比特币','以太坊','加密货币','加密资产','数字资产','稳定币','Bitcoin','Ethereum','crypto','BTC','USDT','Solana')
+            query = query.where(or_(Article.source.in_(['CoinDesk','Cointelegraph']),*[Article.title.ilike('%'+term+'%') for term in terms]))
+        items = s.scalars(query.order_by(Article.collected.desc()).limit(500)).all()
+    items.sort(key=lambda a:a.published or a.collected.isoformat(),reverse=True)
     result = []
     for a in items:
         tags = [k for k in config['keywords'] if k.casefold() in a.title.casefold()]
@@ -191,6 +196,23 @@ def settings():
     return get_config(public=True)
 
 
+@app.get('/api/sources')
+def sources():
+    from .news_sources import CATALOG
+    from .providers import PROVIDERS
+    from .source_health import health
+    config=get_config()
+    news=[]
+    for item in CATALOG:
+        enabled=item['id'] in config.get('news_sources',[])
+        current=health('news:'+item['id'])
+        if not enabled:current={**current,'status':'requires_access' if item['id']=='xueqiu' else 'disabled'}
+        news.append({**item,'enabled':enabled,'health':current})
+    quotes=[{**provider,'health':{m:health(f'quote:{provider["id"]}:{m}') for m in provider['markets']}} for provider in PROVIDERS]
+    return {'news':news,'quotes':quotes,'mode':config['provider'],'checked_at':utcnow().isoformat(),
+            'routing':{'CN':['tencent','eastmoney','yahoo','yahoo_backup'],'HK':['tencent','yahoo','yahoo_backup'],'US':['tencent','yahoo','yahoo_backup'],'CRYPTO':['binance (USDT)','coinbase (同一 USD/USDT 交易对)']}}
+
+
 @app.put('/api/settings')
 async def put_settings(data: SettingsInput):
     changes = data.model_dump(exclude_none=True)
@@ -206,6 +228,9 @@ async def put_settings(data: SettingsInput):
                 await validate_url(feed['url'], resolve=False)
             except ValueError as exc:
                 raise HTTPException(422, str(exc))
+        from .services import release
+        release('news')
+    if 'news_sources' in changes:
         from .services import release
         release('news')
     merged = {**get_config(), **changes}

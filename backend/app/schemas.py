@@ -10,13 +10,21 @@ class StrictModel(BaseModel):
 class WatchInput(StrictModel):
     symbol: str = Field(min_length=1, max_length=30, pattern=r'^[A-Z0-9.^=-]+$')
     name: str = Field(min_length=1, max_length=160)
-    market: Literal['CN', 'HK', 'US']
+    market: Literal['CN', 'HK', 'US', 'CRYPTO']
     exchange: str = Field(default='', max_length=30)
-    kind: Literal['stock', 'etf'] = 'stock'
+    kind: Literal['stock', 'etf', 'crypto'] = 'stock'
     threshold: float = Field(default=5, ge=0.5, le=50)
 
     @model_validator(mode='after')
     def symbol_market(self):
+        import re
+        if self.market == 'CRYPTO':
+            if not re.fullmatch(r'[A-Z0-9]{2,15}-(USD|USDT)', self.symbol) or self.kind != 'crypto':
+                raise ValueError('加密现货请使用 BTC-USDT / BTC-USD 格式，类型选择加密货币')
+            if self.symbol.split('-')[0] in ('USD','USDT'):
+                raise ValueError('交易对基础资产无效')
+        elif self.kind == 'crypto':
+            raise ValueError('加密货币请选择加密市场')
         if self.market == 'CN' and not self.symbol.endswith(('.SS', '.SZ', '.BJ')):
             raise ValueError('A 股代码需要 .SS、.SZ 或 .BJ 后缀')
         if self.market == 'HK' and not self.symbol.endswith('.HK'):
@@ -71,11 +79,12 @@ class SettingsInput(StrictModel):
     webhook_authorization: str | None = Field(default=None, max_length=1000)
     notify_daily: bool | None = None
     notify_alerts: bool | None = None
-    markets: list[Literal['CN', 'HK', 'US']] | None = Field(default=None, max_length=3)
+    markets: list[Literal['CN', 'HK', 'US', 'CRYPTO']] | None = Field(default=None, max_length=4)
     quiet_start: str | None = Field(default=None, pattern=r'^$|^([01][0-9]|2[0-3]):[0-5][0-9]$')
     quiet_end: str | None = Field(default=None, pattern=r'^$|^([01][0-9]|2[0-3]):[0-5][0-9]$')
     keywords: list[str] | None = Field(default=None, max_length=50)
     feeds: list[Feed] | None = Field(default=None, max_length=20)
-    provider: Literal['yahoo', 'custom'] | None = None
+    news_sources: list[Literal['cls','stcn','jin10','wallstreetcn','xueqiu','tradingview','seekingalpha','coindesk','cointelegraph']] | None = Field(default=None,max_length=9)
+    provider: Literal['auto','yahoo','tencent','eastmoney','custom'] | None = None
     provider_base_url: str | None = Field(default=None, max_length=2000)
     provider_key: str | None = Field(default=None, max_length=1000)

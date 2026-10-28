@@ -83,6 +83,12 @@ class Lease(Base):
     until: Mapped[float] = mapped_column(Float, default=0)
 
 
+class SourceHealth(Base):
+    __tablename__ = 'source_health'
+    key: Mapped[str] = mapped_column(String(160), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
 def initialize():
     Base.metadata.create_all(engine)
     with Session.begin() as s:

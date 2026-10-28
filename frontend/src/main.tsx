@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Activity,
@@ -29,8 +29,9 @@ import {
   X,
 } from "lucide-react";
 import { api, AuthError } from "./api";
+import { SourcePanel } from "./SourcePanel";
 import type {
-  Bar,
+  PricePoint,
   Dashboard,
   Event,
   Market,
@@ -42,8 +43,9 @@ import type {
 } from "./types";
 import "./styles.css";
 
-const marketName = { CN: "A 股", HK: "港股", US: "美股" };
-const marketFlag = { CN: "CN", HK: "HK", US: "US" };
+const marketName = { CN: "A 股", HK: "港股", US: "美股", CRYPTO: "加密货币" };
+const marketFlag = { CN: "CN", HK: "HK", US: "US", CRYPTO: "₿" };
+const kindName = (kind: string) => kind === "crypto" ? "加密现货" : kind === "etf" ? "ETF" : "股票";
 const statusName: Record<string, string> = {
   open: "交易中",
   closed: "未开盘 / 已收盘",
@@ -154,7 +156,13 @@ function Modal({
     </div>
   );
 }
-function Chart({ bars, large = false }: { bars: Bar[]; large?: boolean }) {
+function Chart({
+  bars,
+  large = false,
+}: {
+  bars: PricePoint[];
+  large?: boolean;
+}) {
   if (bars.length < 2)
     return (
       <div className={"chart-empty " + (large ? "large" : "")}>
@@ -527,7 +535,7 @@ function App() {
                         </small>
                       </div>
                       <div className="market-time">
-                        <span>开盘后 30 分钟</span>
+                        <span>{m.market === "CRYPTO" ? "7×24 小时 · 每日观察" : "开盘后 30 分钟"}</span>
                         <b>
                           {m.daily_at
                             ? date(m.daily_at).split(" ").at(-1)
@@ -1097,7 +1105,7 @@ function WatchlistPage({
     <>
       <div className="toolbar">
         <div className="tabs">
-          {["ALL", "CN", "HK", "US"].map((m) => (
+          {["ALL", "CN", "HK", "US", "CRYPTO"].map((m) => (
             <button
               key={m}
               className={market === m ? "selected" : ""}
@@ -1272,7 +1280,7 @@ function SearchModal({
   return (
     <Modal title="添加关注标的" close={close}>
       <div className="tabs wide-tabs">
-        {(["CN", "HK", "US"] as Market[]).map((m) => (
+        {(["CN", "HK", "US", "CRYPTO"] as Market[]).map((m) => (
           <button
             className={market === m ? "selected" : ""}
             key={m}
@@ -1327,7 +1335,7 @@ function SearchModal({
             <div>
               <b>{item.name}</b>
               <small>
-                {item.symbol} · {item.kind === "etf" ? "ETF" : "股票"}
+                {item.symbol} · {kindName(item.kind)}
               </small>
             </div>
             <button
@@ -1367,7 +1375,7 @@ function SearchModal({
               symbol: symbol.toUpperCase().trim(),
               name,
               market,
-              kind,
+              kind: market === "CRYPTO" ? "crypto" : kind,
               exchange: market,
             });
           }}
@@ -1383,7 +1391,7 @@ function SearchModal({
                   ? "513100.SS / 159915.SZ"
                   : market === "HK"
                     ? "0700.HK"
-                    : "QQQ"
+                    : market === "CRYPTO" ? "BTC-USDT / ETH-USD" : "QQQ"
               }
             />
           </label>
@@ -1398,7 +1406,8 @@ function SearchModal({
           </label>
           <label>
             类型
-            <select value={kind} onChange={(e) => setKind(e.target.value)}>
+            <select value={market === "CRYPTO" ? "crypto" : kind} disabled={market === "CRYPTO"} onChange={(e) => setKind(e.target.value)}>
+              {market === "CRYPTO" && <option value="crypto">加密现货</option>}
               <option value="etf">ETF</option>
               <option value="stock">股票</option>
             </select>
@@ -1439,7 +1448,7 @@ function DetailModal({
         <div>
           <small>
             {w.symbol} · {marketName[w.market]} ·{" "}
-            {w.kind === "etf" ? "ETF" : "股票"}
+            {kindName(w.kind)}
           </small>
           <h1>
             {fmt(q.price)}{" "}
@@ -1458,7 +1467,7 @@ function DetailModal({
           className={period === "intraday" ? "selected" : ""}
           onClick={() => setPeriod("intraday")}
         >
-          最近交易日 · 5 分钟
+          {w.market === "CRYPTO" ? "近期现货 · 5 分钟" : "最近交易日 · 5 分钟"}
         </button>
         <button
           className={period === "history" ? "selected" : ""}
@@ -1473,7 +1482,12 @@ function DetailModal({
       />
       <div className="detail-source">
         {q.source || "尚无行情"} · 报价时间 {date(q.as_of)}
+        <p>
+          日线来源：{q.history_source || q.source || "尚无数据"} · 分时来源：
+          {q.intraday_source || "尚无数据"}
+        </p>
         <p>{q.delay_note}</p>
+        {q.change_basis && <p>涨跌幅基准：{q.change_basis} · 计价 {q.currency}</p>}
       </div>
       <div className="detail-analysis">
         <h3>
@@ -1836,42 +1850,48 @@ function NewsPage({
   const [items, setItems] = useState<News[]>([]),
     [q, setQ] = useState(""),
     [only, setOnly] = useState(false),
+    [crypto, setCrypto] = useState(false),
+    [loading, setLoading] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const requestId = useRef(0);
   async function load() {
+    const id = ++requestId.current;
+    setLoading(true);
     try {
-      setItems(
-        (
-          await api<{ items: News[] }>(
-            "/news?q=" + encodeURIComponent(q) + "&subscribed=" + only,
-          )
-        ).items,
-      );
+      const result = await api<{ items: News[] }>(
+            "/news?q=" + encodeURIComponent(q) + "&subscribed=" + only + "&topic=" + (crypto ? "crypto" : ""),
+          );
+      if (id !== requestId.current) return;
+      setItems(result.items);
       setError("");
     } catch (e) {
-      setError((e as Error).message);
+      if (id === requestId.current) setError((e as Error).message);
+    } finally {
+      if (id === requestId.current) setLoading(false);
     }
   }
   useEffect(() => {
     const id = setTimeout(() => void load(), 250);
-    return () => clearTimeout(id);
-  }, [q, only]);
+    return () => {clearTimeout(id);requestId.current++;};
+  }, [q, only, crypto]);
   return (
     <>
       <div className="toolbar">
         <div className="tabs">
           <button
-            className={!only ? "selected" : ""}
-            onClick={() => setOnly(false)}
+            className={!only && !crypto ? "selected" : ""}
+            onClick={() => {setOnly(false);setCrypto(false);}}
           >
             全部资讯
           </button>
           <button
             className={only ? "selected" : ""}
-            onClick={() => setOnly(true)}
+            onClick={() => {setOnly(true);setCrypto(false);}}
           >
             我的方向
           </button>
+          <button className={crypto ? "selected" : ""} onClick={() => {setCrypto(true);setOnly(false);}}>加密货币</button>
         </div>
         <div className="row">
           <div className="search-input">
@@ -1896,7 +1916,7 @@ function NewsPage({
                 }>("/news/refresh", "POST");
                 notify(
                   r.status === "cached"
-                    ? "资讯源处于 30 分钟刷新间隔"
+                    ? "来源仍在各自刷新间隔内，请稍后再试"
                     : r.failures?.length
                       ? "部分资讯源失败：" +
                         r.failures
@@ -1917,6 +1937,7 @@ function NewsPage({
           </button>
         </div>
       </div>
+      <SourcePanel />
       <div className="keyword-bar">
         <span>关注方向</span>
         {keywords.slice(0, 8).map((k) => (
@@ -1929,6 +1950,7 @@ function NewsPage({
         </button>
       </div>
       {error && <p className="hint">{error}</p>}
+      {loading && <p className="muted" role="status">正在加载资讯…</p>}
       <section className="card news-list">
         {items.length ? (
           items.map((a, i) => (
@@ -1954,7 +1976,7 @@ function NewsPage({
               </div>
             </article>
           ))
-        ) : (
+        ) : !loading && !error ? (
           <Empty
             title="把重要资讯，汇集到这里"
             text="点击获取资讯，或在偏好设置中添加你信任的 RSS / Atom 源。只展示来源标题与链接，不用 AI 生成新闻。"
@@ -1964,7 +1986,7 @@ function NewsPage({
               </button>
             }
           />
-        )}
+        ) : null}
       </section>
     </>
   );
@@ -2293,24 +2315,24 @@ function SettingsPage({
                 <Bell size={19} />
                 推送与交易日
               </h2>
-              <small>仅在对应市场交易日发送行情日报与盘中信号</small>
+              <small>股票按交易日；加密现货全天监控，按 UTC 日期去重</small>
             </div>
           </div>
           <Switch
-            title="开盘 30 分钟后推送日报"
-            text="各市场独立调度，自动处理美股夏令时；错过 15 分钟窗口不补发过时建议"
+            title="每日行情观察推送"
+            text="股票开盘后 30 分钟；加密货币每天北京时间 08:30。错过 15 分钟窗口不补发过时建议"
             value={s.notify_daily}
             onChange={(v) => change("notify_daily", v)}
           />
           <Switch
             title="盘中异常提醒"
-            text="达到涨跌阈值时推送，同方向同档位每日去重"
+            text="达到涨跌阈值时推送，同方向同档位每日去重；加密货币相对上一 UTC 日收盘计算"
             value={s.notify_alerts}
             onChange={(v) => change("notify_alerts", v)}
           />
           <label className="field-label">监控市场</label>
           <div className="checkbox-row">
-            {(["CN", "HK", "US"] as Market[]).map((m) => (
+            {(["CN", "HK", "US", "CRYPTO"] as Market[]).map((m) => (
               <label key={m}>
                 <input
                   type="checkbox"
@@ -2411,6 +2433,11 @@ function SettingsPage({
             />
             <small>中英文逗号或换行分隔；按标题匹配，不调用 AI。</small>
           </label>
+          <SourcePanel
+            enabledNews={s.news_sources || []}
+            onNewsChange={(ids) => change("news_sources", ids)}
+            quotes
+          />
           <div className="feed-list">
             {s.feeds.map((f, i) => (
               <div key={i}>
@@ -2477,11 +2504,16 @@ function SettingsPage({
               value={s.provider}
               onChange={(e) => change("provider", e.target.value)}
             >
+              <option value="auto">
+                自动切换 · 腾讯 / 东方财富 / Yahoo 主备
+              </option>
+              <option value="tencent">腾讯财经 · 独立报价，备用图表</option>
+              <option value="eastmoney">东方财富 · A 股</option>
               <option value="yahoo">Yahoo Finance · 实验性非官方接口</option>
               <option value="custom">自定义标准化行情接口</option>
             </select>
           </label>
-          {s.provider === "yahoo" ? (
+          {s.provider !== "custom" ? (
             <p className="hint">
               此接口没有稳定性和实时性承诺，可能被限流。仅用于个人验证；长期使用请接入获授权的数据源。无有效数据时不生成操作建议。
             </p>

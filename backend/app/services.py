@@ -112,8 +112,9 @@ def scan_alerts(config, now=None):
         direction = 'up' if pct > 0 else 'down'
         key = f'alert:{w.id}:{state["date"]}:{direction}:{level}:{w.threshold}'
         signal = signals[w.id]
-        title = f'{w.name} 较昨收{ "上涨" if pct>0 else "下跌" } {abs(pct):.2f}%'
-        emit(key, 'alert', title, {'watch_id': w.id, 'market': w.market, 'price': q['price'], 'change_pct': pct, 'quote_at': q['as_of'], 'threshold': w.threshold, 'level': level, 'signal': signal}, config, config['notify_alerts'])
+        basis = '较上一 UTC 日收盘' if w.market == 'CRYPTO' else '较昨收'
+        title = f'{w.name} {basis}{ "上涨" if pct>0 else "下跌" } {abs(pct):.2f}%'
+        emit(key, 'alert', title, {'watch_id': w.id, 'market': w.market, 'price': q['price'], 'currency':q.get('currency'), 'change_basis':q.get('change_basis','昨收'), 'change_pct': pct, 'quote_at': q['as_of'], 'threshold': w.threshold, 'level': level, 'signal': signal}, config, config['notify_alerts'])
 
 
 def quiet_now(config, now=None):
@@ -186,7 +187,8 @@ async def daily_reports(config):
             q = w.quote or {}
             payload['items'].append({'watch_id': w.id, 'name': w.name, 'price': q.get('price'), 'change_pct': q.get('change_pct'), 'quote_at': q.get('as_of'), 'data_valid': not w.error and valid_live_quote(q, state), 'error': w.error, 'signal': signals[w.id]})
         # Reserve and send base report before potentially slow AI calls.
-        emitted = emit(key, 'daily', f'{MARKETS[market]["name"]} · 开盘 30 分钟观察', payload, config, True)
+        label = '每日观察 · UTC 00:30' if market == 'CRYPTO' else '开盘 30 分钟观察'
+        emitted = emit(key, 'daily', f'{MARKETS[market]["name"]} · {label}', payload, config, True)
         if emitted:
             await deliver_pending(config)
         if emitted and config['ai_enabled']:
