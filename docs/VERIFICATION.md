@@ -1,5 +1,12 @@
 # 本次验证记录
 
+## 2026-10-29 GitHub 公开仓库同步
+
+- 原先只有本地 Git 提交，没有配置远端；这与 Docker Hub 镜像发布是两个独立步骤。
+- 已按用户要求创建公开仓库 https://github.com/Stylle/money-web，配置 origin，并将完整提交历史推送到 main。
+- 推送前检查了受版本控制的文件和提交历史中的凭证格式，未上传本地密钥、运行数据库、日志和依赖目录。
+- README 已加入代码仓库、镜像和获取部署配置的说明。
+
 ## 2026-10-28 WSL Docker 验收
 
 - 修正环境判断：管理员用户下已有 WSL 2 发行版 wusaqi-build，Docker Engine 29.9.2 / BuildKit，支持 amd64 与 arm64。受限用户看不到该发行版不代表本机未安装 Docker。
@@ -61,7 +68,7 @@
 ## 尚未执行
 
 - 初始阶段尚未检查到管理员用户的 WSL Docker；这些构建、Compose、PostgreSQL 容器集成、amd64/arm64 及推送检查已在本页最新 WSL Docker 验收中完成。
-- GitHub 远端推送和 Actions 执行：未指定远端，CLI 的现有 GitHub 登录无效；当前只做本地 Git 提交。
+- 初始阶段只做了本地 Git 提交；2026-10-29 已通过管理员账户的有效 GitHub 登录补齐公开仓库及远端推送，见本页最新记录。
 - 真实 AI 模型调用、真实 Webhook 接收端联调：没有配置用户密钥和目标地址。
 - PostgreSQL 备份恢复实操、连续交易日通知验收、策略收益回测：需部署环境和运行时间。
 
