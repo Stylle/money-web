@@ -4,6 +4,8 @@
 
 **代码版本：v0.1.0。镜像已发布：`stylle/money-web:0.1.0` / `latest`，支持 linux/amd64 与 linux/arm64。发布摘要见 [核验记录](docs/docker-release.json)。**
 
+代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
+
 ## 包含什么
 
 - A 股 / 港股 / 美股股票与场内 ETF，以及加密现货独立搜索、自选、分时与历史图表。
@@ -31,6 +33,13 @@
 ## Docker 部署
 
 需要 Docker Engine / Docker Desktop 与 Compose v2。
+
+获取代码与部署配置：
+
+```sh
+git clone https://github.com/Stylle/money-web.git
+cd money-web
+```
 
 ```powershell
 Copy-Item .env.example .env
