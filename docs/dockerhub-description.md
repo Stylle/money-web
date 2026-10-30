@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**代码版本：v0.2.0，默认单容器部署。镜像发布状态以 [核验记录](https://github.com/Stylle/money-web/blob/main/docs/docker-release.json) 为准。**
+**v0.2.0 已发布：`stylle/money-web:0.2.0` / `latest`，支持 linux/amd64、linux/arm64，默认单容器部署。[发布核验记录](https://github.com/Stylle/money-web/blob/main/docs/docker-release.json)。**
 
 代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
 
@@ -66,6 +66,8 @@ docker compose ps
 - `ports`：左侧是宿主机端口，右侧固定为容器的 `8000`。默认只接受本机访问。
 - `environment.APP_TOKEN`：网页访问口令，必须替换为至少 32 位随机字符。AI Key、Webhook 等在网页偏好设置里配置。
 - `volumes`：`money-data` 保存 SQLite 数据库、自选、100 份持仓、资讯、通知记录、加密设置及 `secret.key`。重建容器不丢数据；**不要执行 `docker compose down -v`**，它会删除数据卷。
+
+这是个人单实例部署，不支持通过 `--scale` 共享同一 SQLite 数据库；数据卷应使用本地磁盘。
 
 网页和监控均被健康检查覆盖。浏览器关闭后监控继续运行；宿主机关机、休眠或断网会影响监控。每轮工作后等待 60 秒，网络延迟会影响实际周期。
 
@@ -247,7 +249,7 @@ docker compose cp money-web:/data/. ./backup/
 docker compose up -d
 ```
 
-备份包含敏感信息，需安全保存。用新目录和独立 Compose 项目验证恢复，先 `docker compose create` 创建停止状态容器，再 `docker compose cp ./backup/. money-web:/data/`，确认文件归属 UID/GID 10001，最后 `docker compose up -d`。恢复到原部署前也必须先停止并另做备份，不能直接覆盖运行中的数据库。使用 `ENCRYPTION_KEY` 时另行备份同一个环境变量。
+备份包含敏感信息，需安全保存。用新目录和独立 Compose 项目验证恢复，先 `docker compose create` 创建停止状态容器，再 `docker compose cp ./backup/. money-web:/data/`，再执行 `docker compose run --rm --no-deps --user 0 --entrypoint chown money-web -R 10001:10001 /data` 修正文件归属，最后 `docker compose up -d`。恢复到原部署前也必须先停止并另做备份，不能直接覆盖运行中的数据库。使用 `ENCRYPTION_KEY` 时另行备份同一个环境变量。
 
 旧 PostgreSQL 部署需同时备份 `pg_dump`、原密钥和 `.env`，不要用 SQLite 的目录复制替代数据库备份。
 
