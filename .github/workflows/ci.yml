@@ -43,12 +43,10 @@ jobs:
           push: false
           load: true
           tags: money-web:ci
-      - name: Smoke test container with SQLite
+      - name: Verify single-container lifecycle and persistence
         run: |
-          docker run -d --name smoke -p 127.0.0.1:8080:8000 -e APP_TOKEN=ciTestToken money-web:ci
-          for i in $(seq 1 30); do curl --fail http://127.0.0.1:8080/api/health && break || sleep 2; done
-          curl --fail -H 'Authorization: Bearer ciTestToken' http://127.0.0.1:8080/api/dashboard
-          docker stop smoke
+          docker tag money-web:ci stylle/money-web:ci
+          python scripts/container-smoke.py --tag ci
   publish:
     needs: verify
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)

@@ -10,7 +10,7 @@ import subprocess
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--image',default='stylle/money-web')
-    p.add_argument('--tags',nargs='+',default=['0.1.0','latest'])
+    p.add_argument('--tags',nargs='+',default=['0.2.0','latest'])
     p.add_argument('--docker-config',default='')
     p.add_argument('--output')
     args = p.parse_args()

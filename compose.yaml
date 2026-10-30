@@ -1,64 +1,13 @@
 name: money-web
-x-app: &app
-  image: stylle/money-web:${IMAGE_TAG:-latest}
-  build:
-    context: .
-  restart: unless-stopped
-  environment: &environment
-    DATABASE_URL: postgresql+psycopg://invest:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/invest
-    APP_TOKEN: ${APP_TOKEN:?Set a long random APP_TOKEN in .env}
-    DATA_DIR: /data
-    ALLOW_PRIVATE_ENDPOINTS: ${ALLOW_PRIVATE_ENDPOINTS:-false}
-    TRUSTED_EGRESS_HOSTS: ${TRUSTED_EGRESS_HOSTS:-}
-  volumes:
-    - app-data:/data
-  depends_on:
-    db:
-      condition: service_healthy
-  security_opt:
-    - no-new-privileges:true
-  cap_drop:
-    - ALL
-  read_only: true
-  tmpfs:
-    - /tmp:size=64M,mode=1777
-
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: invest
-      POSTGRES_DB: invest
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: [CMD-SHELL, 'pg_isready -U invest -d invest']
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    security_opt:
-      - no-new-privileges:true
-
-  web:
-    <<: *app
+  money-web:
+    image: stylle/money-web:0.2.0 # 固定版本；latest 随发布更新
+    restart: unless-stopped # 异常退出和宿主机重启后自动启动，手动停止除外
     ports:
-      - '${BIND_ADDRESS:-127.0.0.1}:${PORT:-8080}:8000'
-
-  worker:
-    <<: *app
-    command: [python, -m, app.worker]
-    depends_on:
-      web:
-        condition: service_healthy
-    healthcheck:
-      test: [CMD, python, -c, "from app.db import Session, Config, utcnow; from datetime import datetime; s=Session(); r=s.get(Config,'worker_heartbeat'); assert r and (utcnow()-datetime.fromisoformat(r.value)).total_seconds()<600"]
-      interval: 60s
-      start_period: 300s
-      timeout: 10s
-      retries: 3
-
+      - "127.0.0.1:8080:8000" # 宿主机地址:网页端口:容器端口；局域网访问改为 8080:8000
+    environment:
+      APP_TOKEN: "replace_with_at_least_32_random_characters" # 必改：网页口令，至少 32 位随机字符
+    volumes:
+      - money-data:/data # SQLite、持仓、自选、设置和自动生成的加密密钥
 volumes:
-  app-data:
-  postgres-data:
+  money-data: # Docker 管理的持久卷，更新/重建容器仍保留
