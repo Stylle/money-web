@@ -1,16 +1,28 @@
 """Probe both the HTTP server and an independently updated worker heartbeat."""
-from datetime import datetime
+from datetime import datetime, timezone
+from contextlib import closing
+import os
+from pathlib import Path
+import sqlite3
 import urllib.request
 
 
 def check():
     with urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3) as response:
         assert response.status == 200
-    from .db import Config, Session, utcnow
-    with Session() as session:
-        row = session.get(Config, 'worker_heartbeat')
-        if not row or not 0 <= (utcnow()-datetime.fromisoformat(row.value)).total_seconds() < 120:
-            raise RuntimeError('Worker heartbeat unavailable or stale')
+    database = os.getenv('DATABASE_URL', 'sqlite:///'+str(Path(os.getenv('DATA_DIR', 'data'))/'invest.db'))
+    if database.startswith('sqlite:///'):
+        # Keep frequent probes lightweight, including on small ARM machines.
+        with closing(sqlite3.connect(database[len('sqlite:///'):], timeout=3)) as connection:
+            row = connection.execute("SELECT value FROM config WHERE key='worker_heartbeat'").fetchone()
+            value = row[0] if row else None
+    else:
+        from .db import Config, Session
+        with Session() as session:
+            row = session.get(Config, 'worker_heartbeat')
+            value = row.value if row else None
+    if not value or not 0 <= (datetime.now(timezone.utc)-datetime.fromisoformat(value)).total_seconds() < 120:
+        raise RuntimeError('Worker heartbeat unavailable or stale')
 
 
 if __name__ == '__main__':
