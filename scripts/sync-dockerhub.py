@@ -9,15 +9,19 @@ import urllib.request
 def main():
     secret = getpass.getpass('Docker Hub token: ') if sys.stdin.isatty() else sys.stdin.readline().strip()
     overview = (Path(__file__).resolve().parents[1]/'docs/dockerhub-description.md').read_text(encoding='utf-8')
-    short = 'Single-container investment watch: stocks, ETFs, crypto, news, portfolios and optional AI. Docker Compose ready.'
+    short = 'Single-container investment watch: stocks, ETFs, crypto, news, portfolios and optional AI.'
     def request(url, data=None, token=None, method=None):
         headers = {'Content-Type':'application/json'}
         if token:
             headers['Authorization'] = 'Bearer '+token
         req = urllib.request.Request(url, data=json.dumps(data).encode() if data is not None else None,
                                      headers=headers, method=method)
-        with urllib.request.urlopen(req, timeout=45) as response:
-            return json.load(response)
+        try:
+            with urllib.request.urlopen(req, timeout=45) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as exc:
+            print('Docker Hub request failed: HTTP '+str(exc.code)+' ('+(method or ('POST' if data else 'GET'))+')')
+            raise
     auth = request('https://hub.docker.com/v2/auth/token', {'identifier':'stylle','secret':secret})
     secret = None
     token = auth['access_token']

@@ -50,7 +50,7 @@
 
 1. 数据可行性：公开行情/搜索/RSS 真网络探测，保存 `source-probe.json`，明确延迟和授权限制。
 2. 本地闭环：实际打开网页检查搜索订阅、持仓、设置；后端规则边界测试及前端生产构建。
-3. 容器：已通过 WSL Docker、Compose PostgreSQL/Web/worker、amd64/arm64 镜像及发布核验；完整 PostgreSQL 备份恢复仍待实操。
+3. 容器：v0.2 已通过 Linux 80 项后端测试及单容器故障恢复验收；多架构发布记录见 docker-release.json。v0.1 旧 PostgreSQL 备份恢复仍待实操。
 4. 试运行：连续交易日核对开盘日报、通知到达率、行情延迟和失败恢复，再决定是否启用建议。
 
 v0.2 镜像发布与验收状态见 docker-release.json；真实 AI/Webhook 联调、完整数据库备份恢复及连续交易日观察仍需对应配置与运行时间。
