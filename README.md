@@ -247,7 +247,7 @@ docker compose cp money-web:/data/. ./backup/
 docker compose up -d
 ```
 
-备份包含敏感信息，需安全保存。用新目录和独立 Compose 项目验证恢复，先 `docker compose create` 创建停止状态容器，再 `docker compose cp ./backup/. money-web:/data/`，确认文件归属 UID/GID 10001，最后 `docker compose up -d`。恢复到原部署前也必须先停止并另做备份，不能直接覆盖运行中的数据库。使用 `ENCRYPTION_KEY` 时另行备份同一个环境变量。
+备份包含敏感信息，需安全保存。用新目录和独立 Compose 项目验证恢复，先 `docker compose create` 创建停止状态容器，再 `docker compose cp ./backup/. money-web:/data/`，再执行 `docker compose run --rm --no-deps --user 0 --entrypoint chown money-web -R 10001:10001 /data` 修正文件归属，最后 `docker compose up -d`。恢复到原部署前也必须先停止并另做备份，不能直接覆盖运行中的数据库。使用 `ENCRYPTION_KEY` 时另行备份同一个环境变量。
 
 旧 PostgreSQL 部署需同时备份 `pg_dump`、原密钥和 `.env`，不要用 SQLite 的目录复制替代数据库备份。
 

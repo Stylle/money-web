@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import text
 from app.db import Config, Lease, Session, engine, utcnow
 from app.container import prepare
-from app.worker import heartbeat, run
+from app.worker import run
 
 
 def test_restart_releases_abandoned_jobs_without_changing_settings():
