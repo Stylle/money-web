@@ -409,7 +409,7 @@ function App() {
           <div className="avatar">我</div>
           <div>
             <b>个人投资空间</b>
-            <small>私有部署 · v0.1.0</small>
+            <small>私有部署 · v0.2.0</small>
           </div>
           <LockKeyhole size={15} />
         </div>

@@ -26,7 +26,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title='观澜 Invest Watch', version='0.1.0', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title='观澜 Invest Watch', version='0.2.0', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
 
 @app.middleware('http')
@@ -56,7 +56,7 @@ def health():
     try:
         with Session() as s:
             s.execute(select(1))
-        return {'status': 'ok', 'version': '0.1.0'}
+        return {'status': 'ok', 'version': '0.2.0'}
     except Exception:
         raise HTTPException(503, '数据库不可用')
 

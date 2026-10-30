@@ -2,13 +2,20 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import JSON, DateTime, Float, Integer, String, Text, create_engine
+from sqlalchemy import JSON, DateTime, Float, Integer, String, Text, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 DATA_DIR = Path(os.getenv('DATA_DIR', 'data'))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DATABASE_URL = os.getenv('DATABASE_URL', f'sqlite:///{DATA_DIR / "invest.db"}')
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={'check_same_thread': False} if DATABASE_URL.startswith('sqlite') else {})
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={'check_same_thread': False, 'timeout': 30} if DATABASE_URL.startswith('sqlite') else {})
+if engine.dialect.name == 'sqlite':
+    @event.listens_for(engine, 'connect')
+    def sqlite_options(connection, record):
+        cursor = connection.cursor()
+        cursor.execute('PRAGMA journal_mode=WAL')
+        cursor.execute('PRAGMA busy_timeout=30000')
+        cursor.close()
 Session = sessionmaker(engine, expire_on_commit=False)
 
 

@@ -20,9 +20,13 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     project = 'money-smoke-'+secrets.token_hex(4)
-    env = {**os.environ, 'POSTGRES_PASSWORD':secrets.token_hex(24), 'APP_TOKEN':secrets.token_urlsafe(36),
+    env = {**os.environ, 'APP_TOKEN':secrets.token_urlsafe(36),
            'IMAGE_TAG':args.tag,'BIND_ADDRESS':'127.0.0.1','PORT':'0','COMPOSE_PROGRESS':'plain'}
-    compose = ['docker','compose','-p',project,'-f',str(root/'compose.yaml')]
+    # An isolated override leaves the documented copy-paste file minimal.
+    override = root/'artifacts'/('smoke-'+project+'.json')
+    override.parent.mkdir(exist_ok=True)
+    override.write_text('services:\n  money-web:\n    image: stylle/money-web:'+args.tag+'\n    ports: !override ["127.0.0.1:0:8000"]\n    environment:\n      APP_TOKEN: "'+env['APP_TOKEN']+'"\n    read_only: true\n    tmpfs: ["/tmp:size=64M,mode=1777"]\n    security_opt: ["no-new-privileges:true"]\n    cap_drop: [ALL]\n')
+    compose = ['docker','compose','-p',project,'-f',str(root/'compose.yaml'),'-f',str(override)]
 
     def run(command, *, capture=True):
         result = subprocess.run(command,env=env,cwd=root,text=True,capture_output=capture)
@@ -39,16 +43,17 @@ def main():
         with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
 
     try:
-        print('Starting isolated PostgreSQL, web and worker...',flush=True)
+        print('Starting isolated single container (SQLite, web and worker)...',flush=True)
         run(compose+['up','-d','--no-build','--wait','--wait-timeout','240'],capture=False)
-        web = run(compose+['ps','-q','web']).strip()
+        web = run(compose+['ps','-q','money-web']).strip()
         inspected = json.loads(run(['docker','inspect',web]))[0]
+        assert len(run(compose+['ps','-q']).splitlines()) == 1
         port = inspected['NetworkSettings']['Ports']['8000/tcp'][0]['HostPort']
         base = 'http://127.0.0.1:'+port
         assert inspected['Config']['User'] == 'app'
         assert inspected['HostConfig']['ReadonlyRootfs']
         assert api('health')['status']=='ok'
-        with urllib.request.urlopen(base+'/',timeout=10) as r:assert '观澜' in r.read().decode()
+        with urllib.request.urlopen(base+'/',timeout=10) as r:assert '瑙傛緶' in r.read().decode()
         try:
             urllib.request.urlopen(base+'/api/settings',timeout=10)
             raise AssertionError('Unauthenticated API was accepted')
@@ -65,8 +70,8 @@ def main():
         assert not api('dashboard')['watchlist']
         assert len(api('sources')['news'])==9
         assert len(api('settings')['markets'])==0
-        print('API, authentication, watchlist and PostgreSQL checks passed; checking restart...',flush=True)
-        run(compose+['restart','web'])
+        print('API, authentication, watchlist and SQLite checks passed; checking restart...',flush=True)
+        run(compose+['restart','money-web'])
         # A Docker binding with host port 0 can receive a new port on restart.
         restarted = json.loads(run(['docker','inspect',web]))[0]
         base = 'http://127.0.0.1:'+restarted['NetworkSettings']['Ports']['8000/tcp'][0]['HostPort']
@@ -80,13 +85,35 @@ def main():
         assert api('portfolio')==initial
         assert api('settings')['news_sources']==[]
         assert api('dashboard')['worker_heartbeat']
-        report = {'postgresql':True,'web':True,'worker':True,'nonroot':True,'read_only':True,
+        print('Checking child failure, container recovery and abandoned lease reset...',flush=True)
+        # Mark an abandoned lease, kill just the worker, then require automatic restart.
+        run(['docker','exec',web,'python','-c',"from app.db import Session,Lease; s=Session(); r=s.get(Lease,'worker'); r.until=9999999999; s.commit()"])
+        before = restarted['RestartCount']
+        run(['docker','exec',web,'python','-c',"import json,os,signal; os.kill(json.load(open('/tmp/money-web-runtime.json'))['worker'],signal.SIGKILL)"])
+        deadline = time.monotonic()+120
+        while True:
+            restarted = json.loads(run(['docker','inspect',web]))[0]
+            if restarted['RestartCount']>before and restarted['State'].get('Health',{}).get('Status')=='healthy':break
+            if time.monotonic()>deadline:raise RuntimeError('Worker failure did not recover')
+            time.sleep(1)
+        base = 'http://127.0.0.1:'+restarted['NetworkSettings']['Ports']['8000/tcp'][0]['HostPort']
+        assert api('portfolio')==initial
+        assert api('settings')['news_sources']==[]
+        run(['docker','exec',web,'python','-c',"from app.db import Session,Lease; s=Session(); assert s.get(Lease,'worker').until<9999999999"])
+        # SIGTERM must stop both children promptly and leave a successful exit.
+        started = time.monotonic()
+        run(compose+['stop','-t','12','money-web'])
+        stopped = json.loads(run(['docker','inspect',web]))[0]
+        assert stopped['State']['ExitCode']==0 and time.monotonic()-started<12
+        report = {'single_container':True,'sqlite':True,'web':True,'worker':True,'nonroot':True,'read_only':True,
                   'authentication':True,'crypto_watch_crud':True,'portfolio_unchanged':True,
-                  'restart_persistence':True,'user_data_mounted':False}
+                  'restart_persistence':True,'child_failure_recovery':True,'lease_recovery':True,
+                  'graceful_shutdown':True,'user_data_mounted':False}
         print(json.dumps(report),flush=True)
     finally:
         # Explicit random Compose project owns every volume removed here.
         run(compose+['down','--volumes','--remove-orphans'],capture=False)
+        override.unlink(missing_ok=True)
 
 
 if __name__=='__main__':main()

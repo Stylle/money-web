@@ -10,3 +10,5 @@
 - Backend: run `python -m pytest -q` from backend. Frontend: run `npm run build` from frontend.
 - Docker Hub repository is `stylle/money-web`. Do not report publication without a successful push and manifest verification.
 - Update docs/PLAN.md when scope changes. Unimplemented roadmap features must stay explicitly marked.
+
+- Default releases use one container (web + worker + SQLite). Deployment docs and Docker Hub Overview must start with the same minimal commented Compose, followed by optional parameters. Preserve legacy data paths and explain upgrades.
