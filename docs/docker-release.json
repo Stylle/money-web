@@ -50,5 +50,16 @@
   "github_ci_passed": true,
   "anonymous_manifest_verified": true,
   "temporary_credentials_removed": true,
-  "dockerhub_overview_verified": true
+  "dockerhub_overview_verified": true,
+  "arm64_emulated_runtime": {
+    "platform": "linux/arm64",
+    "emulated": true,
+    "registry_pull": true,
+    "web_health": true,
+    "worker_heartbeat": true,
+    "single_container": true,
+    "probe": "native host curl and read-only SQLite; emulated Python health probe exceeds 10-second timeout",
+    "default_healthcheck_timeout_passed": false
+  },
+  "arm64_native_hardware_tested": false
 }
