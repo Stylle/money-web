@@ -13,3 +13,5 @@
 - API URL 不接收口令查询参数；金额计算器只保存在 React 内存，不发送到后端。
 
 当前没有对真实凭证执行 AI 或 Webhook 联调。请在你的服务上测试配置，勿把密钥提交到 Git 或粘贴到聊天。
+
+- v0.2.1 容器入口短暂以 root 准备专用数据目录及应用文件，随后清空附加组并降权到非零 PUID/PGID；运行进程无有效 capabilities。初始化不修改其他文件、目录或链接。启用 cap_drop ALL 时需要初始化所需的 CHOWN/FOWNER/DAC_OVERRIDE/SETUID/SETGID；显式非 root user 会跳过权限准备。

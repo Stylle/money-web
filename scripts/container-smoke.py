@@ -25,7 +25,7 @@ def main():
     # An isolated override leaves the documented copy-paste file minimal.
     override = root/'artifacts'/('smoke-'+project+'.yaml')
     override.parent.mkdir(exist_ok=True)
-    override.write_text('services:\n  money-web:\n    image: stylle/money-web:'+args.tag+'\n    ports: !override ["127.0.0.1:0:8000"]\n    environment:\n      APP_TOKEN: "'+env['APP_TOKEN']+'"\n    read_only: true\n    tmpfs: ["/tmp:size=64M,mode=1777"]\n    security_opt: ["no-new-privileges:true"]\n    cap_drop: [ALL]\n')
+    override.write_text('services:\n  money-web:\n    image: stylle/money-web:'+args.tag+'\n    ports: !override ["127.0.0.1:0:8000"]\n    environment:\n      APP_TOKEN: "'+env['APP_TOKEN']+'"\n    read_only: true\n    tmpfs: ["/tmp:size=64M,mode=1777"]\n    security_opt: ["no-new-privileges:true"]\n    cap_drop: [ALL]\n    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID]\n')
     compose = ['docker','compose','-p',project,'-f',str(root/'compose.yaml'),'-f',str(override)]
 
     def run(command, *, capture=True):
@@ -50,7 +50,9 @@ def main():
         assert len(run(compose+['ps','-q']).splitlines()) == 1
         port = inspected['NetworkSettings']['Ports']['8000/tcp'][0]['HostPort']
         base = 'http://127.0.0.1:'+port
-        assert inspected['Config']['User'] == 'app'
+        status = run(['docker','exec',web,'cat','/proc/1/status'])
+        assert all(int(value)==10001 for value in next(line for line in status.splitlines() if line.startswith('Uid:')).split()[1:])
+        assert int(next(line for line in status.splitlines() if line.startswith('CapEff:')).split()[1],16)==0
         assert inspected['HostConfig']['ReadonlyRootfs']
         assert api('health')['status']=='ok'
         with urllib.request.urlopen(base+'/',timeout=10) as r:assert '\u89c2\u6f9c' in r.read().decode()

@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir --no-compile -r requirements.lock \
     && mkdir /data && chown app:app /data
 COPY --chown=app:app backend/app ./app
 COPY --from=web --chown=app:app /web/dist ./web
-USER app
+USER root
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 CMD ["python", "-m", "app.healthcheck"]
-CMD ["python", "-m", "app.container"]
+CMD ["python", "-m", "app.bootstrap"]

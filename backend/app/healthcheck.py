@@ -8,6 +8,8 @@ import urllib.request
 
 
 def check():
+    from .bootstrap import drop_privileges
+    drop_privileges()
     with urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3) as response:
         assert response.status == 200
     database = os.getenv('DATABASE_URL', 'sqlite:///'+str(Path(os.getenv('DATA_DIR', 'data'))/'invest.db'))
