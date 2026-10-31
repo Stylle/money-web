@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**v0.2.3 待发布：统一出站代理、NAS 宿主机访问示例与无密钥网络诊断。当前已发布 v0.2.2，历史核验见 [记录](docs/releases/0.2.2.json)。**
+**v0.2.3 已发布：`stylle/money-web:0.2.3` / `latest`，支持 linux/amd64、linux/arm64。新增统一出站代理、NAS 代理部署示例与无密钥网络诊断。[发布核验记录](docs/docker-release.json)。**
 
 代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
 

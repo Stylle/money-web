@@ -7,8 +7,10 @@ import urllib.request
 
 
 def main():
-    secret = getpass.getpass('Docker Hub token: ') if sys.stdin.isatty() else sys.stdin.readline().strip()
     overview = (Path(__file__).resolve().parents[1]/'docs/dockerhub-description.md').read_text(encoding='utf-8')
+    if len(overview.encode('utf-8')) > 25000:
+        raise ValueError('Docker Hub Overview exceeds 25000 UTF-8 bytes; link development details instead')
+    secret = getpass.getpass('Docker Hub token: ') if sys.stdin.isatty() else sys.stdin.readline().strip()
     short = 'Single-container investment watch: stocks, ETFs, crypto, news, portfolios and optional AI.'
     def request(url, data=None, token=None, method=None):
         headers = {'Content-Type':'application/json'}

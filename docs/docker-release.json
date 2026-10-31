@@ -1,12 +1,12 @@
 {
-  "checked_at": "2026-10-31T05:38:24.549489+00:00",
+  "checked_at": "2026-10-31T06:10:25.186994+00:00",
   "image": "stylle/money-web",
   "registry_verified": true,
   "tags_match": true,
   "tags": [
     {
-      "tag": "0.2.2",
-      "digest": "sha256:41b24ed482093ccc21fcd773abb97dba86e7d67a877c2236d5466627a8def3f9",
+      "tag": "0.2.3",
+      "digest": "sha256:cd1577dc5d93c6c8e86dd84b54f3536473312cb056b1afaaf18f1f4a85a64fa5",
       "platforms": [
         "linux/amd64",
         "linux/arm64"
@@ -14,26 +14,28 @@
     },
     {
       "tag": "latest",
-      "digest": "sha256:41b24ed482093ccc21fcd773abb97dba86e7d67a877c2236d5466627a8def3f9",
+      "digest": "sha256:cd1577dc5d93c6c8e86dd84b54f3536473312cb056b1afaaf18f1f4a85a64fa5",
       "platforms": [
         "linux/amd64",
         "linux/arm64"
       ]
     },
     {
-      "tag": "2f35e30",
-      "digest": "sha256:41b24ed482093ccc21fcd773abb97dba86e7d67a877c2236d5466627a8def3f9",
+      "tag": "5137c95",
+      "digest": "sha256:cd1577dc5d93c6c8e86dd84b54f3536473312cb056b1afaaf18f1f4a85a64fa5",
       "platforms": [
         "linux/amd64",
         "linux/arm64"
       ]
     }
   ],
-  "image_source_commit": "2f35e302f1326862186b6480be91565f2104d7f5",
-  "linux_backend_tests_passed": 110,
+  "image_source_commit": "5137c95f5c9eda9735376d352185422bf9e52224",
+  "linux_backend_tests_passed": 151,
+  "windows_backend_tests_passed": 145,
+  "windows_backend_tests_skipped": 6,
   "frontend_tests_passed": 8,
   "frontend_clean_install_and_build_passed": true,
-  "github_ci": "https://github.com/Stylle/money-web/actions/runs/41173085837",
+  "github_ci": "https://github.com/Stylle/money-web/actions/runs/41175087631",
   "github_ci_passed": true,
   "anonymous_manifest_verified": true,
   "temporary_credentials_removed": true,
@@ -48,26 +50,28 @@
     "lease_recovery": true,
     "graceful_shutdown": true,
     "portfolio_unchanged": true,
+    "unreachable_proxy_and_empty_no_proxy_healthcheck": true,
     "user_data_mounted": false
   },
-  "webhook_acceptance": {
-    "magicpush_required_content_and_text_type": true,
-    "legacy_generic_json_unchanged": true,
-    "custom_json_and_text_templates": true,
-    "safe_json_escaping": true,
-    "signed_actual_wire_body": true,
-    "encrypted_and_masked_headers_templates": true,
-    "safe_fixed_magicpush_errors": true,
-    "http_200_business_failure_detected": true,
-    "test_and_outbox_same_adapter": true,
-    "real_httpx_layer_mock_transport_tested": true,
-    "real_magicpush_account_contacted": false
-  },
-  "references": {
-    "movie": "https://github.com/Stylle/today-random-movie-web/blob/main/server/notify.go",
-    "magicpush": "https://github.com/magiccode1412/magicpush/blob/main/apps/website/guide/dev/api-reference.md"
+  "proxy_acceptance": {
+    "real_local_http_forward_proxy": true,
+    "real_local_https_connect_tls": true,
+    "tls_verification_retained": true,
+    "proxy_auth_not_forwarded_to_origin": true,
+    "http_and_connect_407_fixed_diagnostics": true,
+    "no_proxy_real_direct_connection": true,
+    "no_proxy_domain_port_ipv4_ipv6_cidr_boundaries": true,
+    "private_target_restrictions_retained": true,
+    "uppercase_lowercase_hyphen_environment_aliases": true,
+    "diagnostic_packaged_and_redacted": true,
+    "real_user_proxy_or_nas_contacted": false,
+    "real_ai_or_webhook_account_contacted": false
   },
   "arm64_full_runtime_retested": false,
   "arm64_native_hardware_tested": false,
-  "dockerhub_overview_verified": true
+  "dockerhub_overview_verified": true,
+  "references": {
+    "httpx_proxies": "https://www.python-httpx.org/advanced/proxies/",
+    "docker_host_gateway": "https://docs.docker.com/compose/how-tos/networking/"
+  }
 }

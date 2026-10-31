@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**v0.2.3 待发布：统一出站代理、NAS 宿主机访问示例与无密钥网络诊断。当前已发布 v0.2.2，历史核验见 [记录](https://github.com/Stylle/money-web/blob/main/docs/releases/0.2.2.json)。**
+**v0.2.3 已发布：`stylle/money-web:0.2.3` / `latest`，支持 linux/amd64、linux/arm64。新增统一出站代理、NAS 代理部署示例与无密钥网络诊断。[发布核验记录](https://github.com/Stylle/money-web/blob/main/docs/docker-release.json)。**
 
 代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
 
@@ -175,58 +175,6 @@ NAS 若需沿用本机用户和组，在 `environment` 中按实际数字添加 
 
 新建空目录使用 v0.2 单容器会创建新 SQLite 数据，不能自动继承旧持仓；目前没有 PostgreSQL → SQLite 自动迁移工具。若需保留旧库并升级应用，可将 v0.2 单容器的 `DATABASE_URL` 指向原 PostgreSQL、挂载原加密密钥，并继续保留数据库服务。迁移前必须备份；不要删除旧卷，也不要把旧数据库目录挂到 `/data`。
 
-## 本地开发（无 Docker）
-
-需要 Python 3.12、Node.js 22+，本地与默认 Compose 均使用 SQLite。
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r backend\requirements.lock
-cd frontend
-npm ci
-npm run build
-cd ..
-.\.venv\Scripts\python.exe -m uvicorn --app-dir backend app.main:app --host 127.0.0.1 --port 8000 --no-access-log
-```
-
-打开 <http://localhost:8000>。开发热更新可在另一个终端进入 frontend 运行 `npm run dev`，其 `/api` 代理到 8000。
-
-独立终端启动后台监控：
-
-```powershell
-$env:PYTHONPATH='backend'
-.\.venv\Scripts\python.exe -m app.worker
-```
-
-Windows 持续试用可在 PowerShell 7 使用以下脚本在后台启动网页与监控，关闭当前终端后仍保持运行：
-
-```powershell
-.\scripts\start-local.ps1
-# 已有其他虚拟环境时可显式指定：
-# .\scripts\start-local.ps1 -Python E:\path\to\.venv\Scripts\python.exe
-# 受信 Fake-IP 代理环境另传 -TrustedEgressHosts 'query1.finance.yahoo.com,query2.finance.yahoo.com,www.federalreserve.gov'
-```
-
-脚本会等待健康检查、避免重复启动，并将日志和进程状态保存在忽略提交的 data 目录。
-首次显式指定的 Python 环境与受信域名会在本地记住，之后运行脚本可复用；不会记录访问口令或 API Key。
-主动停止时运行 `.\scripts\stop-local.ps1`。这些是本地后台进程，不是开机自启服务；重启电脑后需再次启动。
-如果页面显示“无法连接后端服务”，先运行启动脚本，再点击对应页面的重试按钮。偏好设置和搜索失败会显示原因，不再无限加载。
-
-API 和 worker 的工作目录、DATABASE_URL、DATA_DIR 必须一致。无 APP_TOKEN 的本地模式只接受环回请求。配置令牌时通过当前终端环境变量设置；不将密钥写入命令行参数或提交到 Git。
-
-## 首次使用
-
-1. 搜索并订阅具体代码，点击刷新行情。查看报价来源与时间。
-2. 在持仓页配置资产和现金，合计必须为 100 份。允许添加 0 份仓位设置将来加仓上限。
-3. 设置关键词和 RSS；获取资讯。
-   内置来源已默认启用八个，来源面板显示最近成功时间、条数、失败或访问限制；内置源按 5～10 分钟、RSS 按 30 分钟刷新。发布时间未知的网页标题会明确标注，不进入 AI 的今日新闻证据。
-4. 按需开启程序策略。AI 可完全不配置；开启前填写 API/模型/密钥，保存后测试连接。
-5. 配置 Webhook，保存后测试；确认后台监控状态正常。
-6. 操作后在持仓页手动更新份额并保存。保存持仓仅是记录，不会交易。
-
-标的阈值在自选页面底部“管理订阅与异常阈值”设置。默认 ±5%，10% 是第二档，同方向同档每天一次。分时图为最近交易日，不代表今日仍在开盘。
-现金预算在同批程序建议之间共享；不会把尚未执行的减仓当作可用资金。跨次生成的提示仍基于当时持仓快照，操作后需及时更新。
-
 ## Webhook 与 MagicPush
 
 ### MagicPush 配置
@@ -274,44 +222,6 @@ MagicPush 的 `/api/inbound/接口令牌` 是另一种入站映射接口，需�
 
 最多重试三次，静默期暂停，15 分钟过期。至少一次投递不能保证绝不重复；MagicPush 部分渠道成功后重试可能导致该渠道重复，请结合其推送记录核对。测试消息立即发送，不受静默期限制。协议模拟测试不等同于你的真实 MagicPush 账号/渠道已完成联调。
 
-## 测试与诊断
-
-```powershell
-cd backend
-python -m pytest -q
-cd ../frontend
-npm ci
-npm test
-npm run build
-cd ..
-python scripts/probe_sources.py
-# 扩展来源逐项诊断，只写状态与诊断文件，不修改持仓/自选：
-python scripts/check_integrations.py
-```
-
-诊断结果写入 `docs/source-probe.json`；不修改用户自选或持仓，不打印密钥。依赖锁文件固定了本次验证版本。
-浏览器验收检查了首页、搜索订阅、持仓份额不平衡时禁用保存、设置页面。容器验收覆盖单容器数量、网页与监控、鉴权、进程故障恢复和重启持久化；ARM 为仿真环境。真实 AI/Webhook 仍需你的配置。
-
-## Docker Hub 发布
-
-本机 Docker 可用且已通过 `docker login` 登录目标账号后：
-
-```powershell
-.\scripts\publish.ps1 -Tag 0.2.3
-```
-
-如果 Windows 没有 docker.exe，但已有 WSL 构建环境（本机为 `wusaqi-build`），可复用 Linux 内已登录的 Docker：
-
-```powershell
-.\scripts\publish.ps1 -Tag 0.2.3 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
-```
-
-`-DockerConfig` 只传配置目录，不接收或输出 Token；登录时使用 `docker login --password-stdin`，不要把凭证放进项目或构建参数。`/run` 中的临时登录会随环境重启丢失，发布结束应清除。WSL 属于 Windows 管理员用户，受限账户看不到该发行版时需在该用户下执行。发布期间保持一个 WSL 终端打开，避免发行版空闲退出清除 `/run`。
-
-脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.2.3` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
-
-仓库还包含 `.github/workflows/ci.yml`：推送 main/PR 会测试和构建；发布 v* 标签或手动指定 publish 才推 Docker Hub。需在 GitHub 配置 `DOCKERHUB_TOKEN` Secret，用户名为 stylle。**公开 GitHub 仓库已建立；DOCKERHUB_TOKEN Secret 尚未配置，当前由本机授权发布。**
-
 ## 备份与恢复
 
 默认 SQLite：先停容器，再复制整个 `/data`，包含数据库、WAL（若有）和加密密钥。以下命令在 Compose 所在目录执行，备份目录应为空：
@@ -335,3 +245,5 @@ docker compose up -d
 - [安全说明](https://github.com/Stylle/money-web/blob/main/SECURITY.md)
 
 本工具只聚合信息与提供辅助判断。价格、规则和 AI 都可能出错，任何交易由使用者自行决定。
+
+开发与测试说明见 [完整 README](https://github.com/Stylle/money-web#readme)。
