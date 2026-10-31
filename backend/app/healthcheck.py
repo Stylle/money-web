@@ -10,7 +10,9 @@ import urllib.request
 def check():
     from .bootstrap import drop_privileges
     drop_privileges()
-    with urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3) as response:
+    # Local liveness must never depend on an external proxy or NO_PROXY setup.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open('http://127.0.0.1:8000/api/health', timeout=3) as response:
         assert response.status == 200
     database = os.getenv('DATABASE_URL', 'sqlite:///'+str(Path(os.getenv('DATA_DIR', 'data'))/'invest.db'))
     if database.startswith('sqlite:///'):

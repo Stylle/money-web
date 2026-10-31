@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**v0.2.2 已发布：`stylle/money-web:0.2.2` / `latest`，支持 linux/amd64、linux/arm64。单容器部署，新增 MagicPush 适配与自定义 Webhook。[发布核验记录](https://github.com/Stylle/money-web/blob/main/docs/docker-release.json)。**
+**v0.2.3 待发布：统一出站代理、NAS 宿主机访问示例与无密钥网络诊断。当前已发布 v0.2.2，历史核验见 [记录](https://github.com/Stylle/money-web/blob/main/docs/releases/0.2.2.json)。**
 
 代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
 
@@ -40,7 +40,7 @@
 name: money-web
 services:
   money-web:
-    image: stylle/money-web:0.2.2 # 固定版本；latest 随发布更新
+    image: stylle/money-web:0.2.3 # 固定版本；latest 随发布更新
     restart: unless-stopped # 异常退出和宿主机重启后自动启动，手动停止除外
     ports:
       - "127.0.0.1:8080:8000" # 宿主机地址:网页端口:容器端口；局域网访问改为 8080:8000
@@ -61,7 +61,7 @@ docker compose ps
 
 本机打开 <http://localhost:8080>，输入 `APP_TOKEN`。局域网/NAS 访问把端口改为 `"8080:8000"`，再打开 `http://服务器IP:8080`；公网访问应使用 HTTPS 反向代理。共享访问口令需保密。
 
-- `image`：镜像与版本；固定 `0.2.2` 方便复现，`latest` 随发布更新。
+- `image`：镜像与版本；固定 `0.2.3` 方便复现，`latest` 随发布更新。
 - `restart`：进程异常退出会由容器管理器退出整个容器，Docker 自动重启；网页或监控子进程不会默默消失。Docker 的 `unhealthy` 状态本身不会触发重启，需要监控平台介入。
 - `ports`：左侧是宿主机端口，右侧固定为容器的 `8000`。默认只接受本机访问。
 - `environment.APP_TOKEN`：网页访问口令，必须替换为至少 32 位随机字符。AI Key、Webhook 等在网页偏好设置里配置。
@@ -83,7 +83,7 @@ docker compose stop
 docker compose up -d
 ```
 
-始终保留同一个目录和 `name: money-web`，避免换项目名称后挂上一个新的空数据卷。源码构建可用 `docker build -t stylle/money-web:0.2.2 .`，然后运行同一份 Compose。
+始终保留同一个目录和 `name: money-web`，避免换项目名称后挂上一个新的空数据卷。源码构建可用 `docker build -t stylle/money-web:0.2.3 .`，然后运行同一份 Compose。
 
 ### 可选参数（按需添加）
 
@@ -92,6 +92,9 @@ docker compose up -d
 | 参数 | 默认值 | 用途 |
 | --- | --- | --- |
 | `APP_TOKEN` | 无 | 网页访问口令；最简文件已包含，必须替换 |
+| `HTTP_PROXY` / `HTTPS_PROXY` | 空，直连 | HTTP / HTTPS 目标各自的代理；支持 HTTP 或 HTTPS 代理服务器，通常都填 `http://主机:HTTP或Mixed端口` |
+| `ALL_PROXY` | 空 | 该协议未设置代理变量时的后备代理；不支持 SOCKS 端口 |
+| `NO_PROXY` | 空 | 逗号分隔的直连域名、IP、IP 网段或 `*`；内网 AI、MagicPush 等按需排除 |
 | `TRUSTED_EGRESS_HOSTS` | 空 | 受信 Fake-IP DNS 的精确公网域名，逗号分隔；普通公网 DNS 不需要 |
 | `ALLOW_PRIVATE_ENDPOINTS` | `false` | 内网 AI/Webhook 必须显式设为 `true`；同时自行配置出口隔离 |
 | `ENCRYPTION_KEY` | 自动创建 `/data/secret.key` | 可选 Fernet 密钥；设置后必须独立安全备份，不能随意更换 |
@@ -115,7 +118,40 @@ docker compose up -d
     cpus: 2
 ```
 
-默认不读取环境代理，拒绝私网和保留地址。若代理采用 198.18.0.0/15 Fake-IP，可添加以下设置；只对列出的精确域名豁免 Fake-IP，不放开任意私网：
+### 容器使用 NAS / 本机代理
+
+v0.2.3 起，行情、搜索、资讯、AI 和 Webhook 统一读取上述代理变量；未配置时直连。旧版显式忽略环境代理，只有添加变量不会生效，需要升级镜像。支持对应小写变量；大小写同时存在时小写优先，显式空值禁用该协议代理且不再回退 `ALL_PROXY`。兼容 NAS 中误写的 `http-proxy` / `https-proxy` 等连字符名称，建议统一改为下划线标准名称。
+
+容器里的 `localhost` / `127.0.0.1` 是容器自身。代理运行在 NAS 宿主机时，在原 Compose 服务中合并如下内容，保留原口令和数据卷；`7890` 替换为代理实际的 **HTTP / Mixed 端口**：
+
+```yaml
+    environment:
+      APP_TOKEN: "保留你的原口令"
+      HTTP_PROXY: "http://host.docker.internal:7890"
+      HTTPS_PROXY: "http://host.docker.internal:7890" # HTTPS 目标通常也使用 http:// 代理，通过 CONNECT 隧道访问
+      NO_PROXY: "localhost,127.0.0.1,::1,host.docker.internal" # 自建 AI/MagicPush 的域名或 IP 也加在这里
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Linux/NAS 将此名称映射到 Docker 宿主机网关
+```
+
+- 代理必须监听容器可达的宿主机网卡/网关地址并开启「允许局域网连接」，同时在防火墙允许 Docker 网段。仅监听宿主机 `127.0.0.1` 的代理无法通过网关访问。不要为了使用代理设置容器 `network_mode: host` 或 `privileged`。
+- 如果代理运行在另一台电脑，把两项代理地址都换为那台电脑的局域网 IP，例如 `http://192.168.1.20:7890`，不需要 `extra_hosts`；电脑关机或休眠时代理不可用。NAS 虚拟机内的 Docker，宿主机指 Docker 引擎所在虚拟机，可能仍需使用实际代理机器的局域网 IP。
+- `HTTPS_PROXY` 表示用于 HTTPS **目标**，不意味着代理本身必须是 `https://`。只有代理端口确实提供 TLS 时才用 `https://`；SOCKS 专用端口会给出配置错误，请改用 HTTP/Mixed 端口。[HTTPX 说明](https://www.python-httpx.org/advanced/proxies/)、[Docker 网关说明](https://docs.docker.com/compose/how-tos/networking/)。
+- `NO_PROXY=example.com` 匹配该域名及其子域名，不匹配 `badexample.com`；支持 `example.com:8443`、`https://example.com`、IPv4/IPv6 和 CIDR。网段只匹配 URL 中的 IP 字面量，不会解析域名来匹配网段；内网域名请显式添加。`*` 使全部直连。
+- 内网 HTTP AI/MagicPush 还需 `ALLOW_PRIVATE_ENDPOINTS: "true"`；`NO_PROXY` 仅控制路由，不放宽目标地址安全校验。代理自身可以使用私网地址，无需为代理开启此选项。
+- 代理认证可按需使用 URL 中的账号密码（特殊字符做 URL 编码，Compose 中字面 `$` 写成 `$$`）。环境变量可被 NAS 管理员查看；不要把含密码的配置上传 Git。错误和诊断命令不输出代理 URL、账号、密码。
+
+修改环境变量后重建容器，单纯 `docker compose restart` 不会更新环境：
+
+```sh
+docker compose pull
+docker compose up -d --force-recreate
+docker compose exec money-web python -m app.networkcheck
+```
+
+诊断命令显示 HTTP/HTTPS 使用的变量名、代理/直连、NO_PROXY 是否匹配、代理是否误指向环回，并通过同一出站链路访问固定公共测试站点。不会读取 AI/Webhook 设置或发送通知；HTTP 只检查路由，HTTPS 执行十秒超时测试，失败返回非零退出码。测试站点连通不代表所有行情源可用，仍需查看网页来源状态。失败会区分代理认证、握手、连接及超时；不会在代理失败后悄悄切换直连。容器自身健康检查始终直连，不依赖代理可用性。
+
+仍保留 HTTPS 证书验证、目标域名 DNS 预检查、私网限制、禁止重定向与 4MB 响应限制。代理不绕过本地 DNS 检查；域名无法解析时需修复容器 DNS。若受信 DNS 采用 198.18.0.0/15 Fake-IP，可添加以下设置；只对列出的精确域名豁免 Fake-IP，不放开任意私网：
 
 ```yaml
     environment:
@@ -131,7 +167,7 @@ NAS 若需沿用本机用户和组，在 `environment` 中按实际数字添加 
 
 `ERROR:root` 是日志名称，不代表进程身份。新版启动日志会报告失败阶段：`data-volume-initialization`（NAS ACL、只读挂载或初始化能力）、`sqlite-lock-file`、`sqlite-advisory-lock`、`database-initialization`、`encryption-key`、`runtime-state-in-tmp`。
 
-从 0.2.0 更新：修改 Compose 的镜像为 `stylle/money-web:0.2.2`，保留原数据卷，运行 `docker compose pull` 和 `docker compose up -d`。开启 `read_only` 时必须保留可写 `/tmp`；使用 `cap_drop: [ALL]` 时需补上上方 `cap_add`。NAS ACL、只读存储或 NFS root_squash 无法由应用绕过，遇到这种情况需按明确的失败阶段调整 NAS 挂载设置或配置对应 PUID/PGID。
+从 0.2.0 更新：修改 Compose 的镜像为 `stylle/money-web:0.2.3`，保留原数据卷，运行 `docker compose pull` 和 `docker compose up -d`。开启 `read_only` 时必须保留可写 `/tmp`；使用 `cap_drop: [ALL]` 时需补上上方 `cap_add`。NAS ACL、只读存储或 NFS root_squash 无法由应用绕过，遇到这种情况需按明确的失败阶段调整 NAS 挂载设置或配置对应 PUID/PGID。
 
 ### 从 v0.1 三容器部署继续使用
 
@@ -261,18 +297,18 @@ python scripts/check_integrations.py
 本机 Docker 可用且已通过 `docker login` 登录目标账号后：
 
 ```powershell
-.\scripts\publish.ps1 -Tag 0.2.2
+.\scripts\publish.ps1 -Tag 0.2.3
 ```
 
 如果 Windows 没有 docker.exe，但已有 WSL 构建环境（本机为 `wusaqi-build`），可复用 Linux 内已登录的 Docker：
 
 ```powershell
-.\scripts\publish.ps1 -Tag 0.2.2 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
+.\scripts\publish.ps1 -Tag 0.2.3 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
 ```
 
 `-DockerConfig` 只传配置目录，不接收或输出 Token；登录时使用 `docker login --password-stdin`，不要把凭证放进项目或构建参数。`/run` 中的临时登录会随环境重启丢失，发布结束应清除。WSL 属于 Windows 管理员用户，受限账户看不到该发行版时需在该用户下执行。发布期间保持一个 WSL 终端打开，避免发行版空闲退出清除 `/run`。
 
-脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.2.2` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
+脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.2.3` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
 
 仓库还包含 `.github/workflows/ci.yml`：推送 main/PR 会测试和构建；发布 v* 标签或手动指定 publish 才推 Docker Hub。需在 GitHub 配置 `DOCKERHUB_TOKEN` Secret，用户名为 stylle。**公开 GitHub 仓库已建立；DOCKERHUB_TOKEN Secret 尚未配置，当前由本机授权发布。**
 

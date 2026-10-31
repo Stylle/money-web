@@ -25,7 +25,9 @@ def main():
     # An isolated override leaves the documented copy-paste file minimal.
     override = root/'artifacts'/('smoke-'+project+'.yaml')
     override.parent.mkdir(exist_ok=True)
-    override.write_text('services:\n  money-web:\n    image: stylle/money-web:'+args.tag+'\n    ports: !override ["127.0.0.1:0:8000"]\n    environment:\n      APP_TOKEN: "'+env['APP_TOKEN']+'"\n    read_only: true\n    tmpfs: ["/tmp:size=64M,mode=1777"]\n    security_opt: ["no-new-privileges:true"]\n    cap_drop: [ALL]\n    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID]\n')
+    # Intentionally unreachable proxies and no exclusions: local health must
+    # remain healthy even when the operator's external proxy is unavailable.
+    override.write_text('services:\n  money-web:\n    image: stylle/money-web:'+args.tag+'\n    ports: !override ["127.0.0.1:0:8000"]\n    environment:\n      APP_TOKEN: "'+env['APP_TOKEN']+'"\n      HTTP_PROXY: "http://127.0.0.1:1"\n      HTTPS_PROXY: "http://127.0.0.1:1"\n      NO_PROXY: ""\n    read_only: true\n    tmpfs: ["/tmp:size=64M,mode=1777"]\n    security_opt: ["no-new-privileges:true"]\n    cap_drop: [ALL]\n    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID]\n')
     compose = ['docker','compose','-p',project,'-f',str(root/'compose.yaml'),'-f',str(override)]
 
     def run(command, *, capture=True):
