@@ -130,6 +130,13 @@ export type Settings = {
   ai_key?: string;
   ai_key_configured?: boolean;
   webhook_url: string;
+  webhook_format: 'auto' | 'raw' | 'magicpush' | 'custom';
+  webhook_method: 'POST' | 'PUT' | 'GET';
+  webhook_body_type: 'json' | 'text';
+  webhook_headers?: string;
+  webhook_headers_configured?: boolean;
+  webhook_body_tpl?: string;
+  webhook_body_tpl_configured?: boolean;
   webhook_secret?: string;
   webhook_secret_configured?: boolean;
   webhook_authorization?: string;

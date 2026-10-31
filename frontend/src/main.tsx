@@ -409,7 +409,7 @@ function App() {
           <div className="avatar">我</div>
           <div>
             <b>个人投资空间</b>
-            <small>私有部署 · v0.2.1</small>
+            <small>私有部署 · v0.2.2</small>
           </div>
           <LockKeyhole size={15} />
         </div>
@@ -2187,6 +2187,25 @@ function SettingsPage({
       setBusy(false);
     }
   }
+  async function testWebhook() {
+    if (!s) return;
+    setBusy(true);
+    try {
+      const keys = ['webhook_url', 'webhook_format', 'webhook_method', 'webhook_body_type',
+        'webhook_headers', 'webhook_body_tpl', 'webhook_secret', 'webhook_authorization'] as const;
+      const body = Object.fromEntries(keys.filter((key) => s[key] !== undefined).map((key) => [key, s[key]]));
+      const saved = await api<Settings>('/settings', 'PUT', body);
+      setS((old) => old ? { ...old, webhook_headers: undefined, webhook_body_tpl: undefined,
+        webhook_secret: undefined, webhook_authorization: undefined,
+        ...Object.fromEntries(Object.entries(saved).filter(([key]) => key.startsWith('webhook_'))) } : old);
+      await api('/webhook/test', 'POST', undefined, { timeoutMs: 20000 });
+      notify('Webhook 设置已保存，测试推送成功');
+    } catch (e) {
+      notify((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   if (!s)
     return loadError ? (
       <section className="card connection-failure" role="alert">
@@ -2376,6 +2395,45 @@ function SettingsPage({
               />
             </label>
             <label>
+              推送格式
+              <select value={s.webhook_format || 'auto'} onChange={(e) => change('webhook_format', e.target.value)}>
+                <option value="auto">自动识别（支持 MagicPush）</option>
+                <option value="magicpush">MagicPush · 标题与正文</option>
+                <option value="raw">观澜原始事件 JSON</option>
+                <option value="custom">自定义正文模板</option>
+              </select>
+            </label>
+            <label>
+              请求方法
+              <select value={s.webhook_method || 'POST'} onChange={(e) => change('webhook_method', e.target.value)}>
+                <option value="POST">POST</option><option value="PUT">PUT</option><option value="GET">GET（JSON 字段转查询参数）</option>
+              </select>
+            </label>
+            {(s.webhook_format === 'auto' || s.webhook_format === 'magicpush') && (
+              <p className="muted full">MagicPush 使用 /api/push/接口令牌，或 /api/push 配合 Authorization: Bearer 接口令牌。自动模式识别标准推送路径；自定义路径可直接选择 MagicPush 格式。通知发送 title、content 和 type=text。</p>
+            )}
+            {s.webhook_format === 'custom' && <>
+              <label>
+                正文类型
+                <select value={s.webhook_body_type || 'json'} onChange={(e) => change('webhook_body_type', e.target.value)}>
+                  <option value="json">JSON</option><option value="text">纯文本（POST/PUT）</option>
+                </select>
+              </label>
+              <label className="full">
+                正文模板（留空使用默认正文）
+                <textarea rows={6} value={s.webhook_body_tpl ?? ''} onChange={(e) => change('webhook_body_tpl', e.target.value)}
+                  placeholder={s.webhook_body_tpl_configured ? '已保存，未修改则保留；输入完整模板替换（敏感内容不回显）' : '{"title":"{{title}}","content":"{{text}}","type":"text"}'} autoComplete="off" />
+                <small>{'变量：{{title}} {{text}} {{content}} {{event}} {{id}} {{timestamp}} {{fields}} {{payload}}。JSON 变量会自动转义；{{fields}} 可不加引号保留对象。'}</small>
+                {s.webhook_body_tpl_configured && <button type="button" className="text-link danger" onClick={() => change('webhook_body_tpl', '')}>清除已保存模板（保存生效）</button>}
+              </label>
+            </>}
+            <label className="full">
+              自定义请求头（可选，JSON 对象）
+              <textarea rows={2} value={s.webhook_headers ?? ''} onChange={(e) => change('webhook_headers', e.target.value)} autoComplete="off"
+                placeholder={s.webhook_headers_configured ? '已保存，未修改则保留；输入完整 JSON 替换（敏感内容不回显）' : '{"X-API-Key":"接收端密钥"}'} />
+              {s.webhook_headers_configured && <button type="button" className="text-link danger" onClick={() => change('webhook_headers', '')}>清除自定义请求头（保存生效）</button>}
+            </label>
+            <label>
               签名密钥（可选）
               <input
                 type="password"
@@ -2387,6 +2445,7 @@ function SettingsPage({
                     : "HMAC-SHA256 签名"
                 }
               />
+              <small>这是观澜 HMAC 签名密钥；MagicPush 接口令牌请放在地址或 Authorization 中。</small>
             </label>
             <label>
               Authorization 请求头（可选）
@@ -2405,15 +2464,14 @@ function SettingsPage({
             </label>
           </div>
           <p className="muted">
-            通用 JSON
-            Webhook，接收端需适配该格式。静默期间不发送，过期提醒丢弃；测试消息立即发送。
+            保存并测试只更新推送设置，不保存其他尚未提交的偏好。MagicPush 返回 400 时也可能是令牌无效、接口未绑定渠道或下游渠道失败。静默期间不发送，过期提醒丢弃；测试消息立即发送。
           </p>
           <button
             className="secondary"
             disabled={busy || !s.webhook_url}
-            onClick={() => void test("/webhook/test")}
+            onClick={() => void testWebhook()}
           >
-            测试推送连接 <ArrowRight size={15} />
+            保存并测试推送 <ArrowRight size={15} />
           </button>
         </section>
         <section className="card settings-card">

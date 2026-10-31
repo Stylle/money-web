@@ -1,7 +1,5 @@
 import asyncio
 import hashlib
-import hmac
-import json
 import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -11,7 +9,8 @@ from .db import Article, Config, Delivery, Event, Lease, Portfolio, Session, Wat
 from .config import get_config
 from .markets import MARKETS, market_state, valid_live_quote
 from .providers import fetch_quote
-from .security import request, safe_error
+from .security import safe_error
+from .webhooks import send_webhook
 from .strategy import analyze, analyze_all
 
 
@@ -123,17 +122,6 @@ def quiet_now(config, now=None):
     if not start or not end or start == end:
         return False
     return start <= at < end if start < end else at >= start or at < end
-
-
-async def send_webhook(config, payload):
-    raw = json.dumps(payload, ensure_ascii=False, separators=(',', ':')).encode()
-    stamp = str(int(time.time()))
-    headers = {'Content-Type': 'application/json', 'Idempotency-Key': payload['id'], 'X-InvestWatch-Timestamp': stamp}
-    if config['webhook_secret']:
-        headers['X-InvestWatch-Signature'] = 'sha256='+hmac.new(config['webhook_secret'].encode(), stamp.encode()+b'.'+raw, hashlib.sha256).hexdigest()
-    if config['webhook_authorization']:
-        headers['Authorization'] = config['webhook_authorization']
-    await request('POST', config['webhook_url'], content=raw, headers=headers)
 
 
 async def deliver_pending(config):

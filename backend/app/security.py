@@ -6,6 +6,10 @@ from urllib.parse import urlsplit
 import httpx
 
 
+class WebhookError(ValueError):
+    """Only fixed, locally authored user-facing diagnostics may be passed here."""
+
+
 async def validate_url(url, resolve=True):
     parsed = urlsplit(url)
     if parsed.scheme not in ('https', 'http') or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
@@ -38,9 +42,11 @@ async def request(method, url, **kwargs):
     # DNS rebinding cannot be completely mitigated by preflight validation;
     # production deployments must also use an egress firewall (see SECURITY.md).
     timeout = kwargs.pop('timeout', 20)
+    raise_status = kwargs.pop('raise_status', True)
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=False, trust_env=False) as client:
         async with client.stream(method, url, **kwargs) as response:
-            response.raise_for_status()
+            if raise_status:
+                response.raise_for_status()
             parts, size = [], 0
             async for part in response.aiter_bytes():
                 size += len(part)
@@ -54,6 +60,8 @@ async def request(method, url, **kwargs):
 
 
 def safe_error(exc):
+    if isinstance(exc, WebhookError):
+        return str(exc)
     if isinstance(exc, httpx.HTTPStatusError):
         return f'上游接口返回 HTTP {exc.response.status_code}'
     if isinstance(exc, (httpx.TimeoutException, TimeoutError)):

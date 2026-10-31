@@ -26,7 +26,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title='观澜 Invest Watch', version='0.2.1', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title='观澜 Invest Watch', version='0.2.2', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
 
 @app.middleware('http')
@@ -56,7 +56,7 @@ def health():
     try:
         with Session() as s:
             s.execute(select(1))
-        return {'status': 'ok', 'version': '0.2.1'}
+        return {'status': 'ok', 'version': '0.2.2'}
     except Exception:
         raise HTTPException(503, '数据库不可用')
 
@@ -234,6 +234,12 @@ async def put_settings(data: SettingsInput):
         from .services import release
         release('news')
     merged = {**get_config(), **changes}
+    from .webhooks import validate_config
+    from .security import WebhookError
+    try:
+        validate_config(merged)
+    except WebhookError as exc:
+        raise HTTPException(422, safe_error(exc))
     if merged['ai_enabled'] and not (merged['ai_key'] and merged['ai_model']):
         raise HTTPException(422, '开启 AI 前请配置密钥与模型')
     if merged['provider'] == 'custom' and not merged['provider_base_url']:

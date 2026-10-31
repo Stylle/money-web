@@ -1,5 +1,5 @@
 param(
-    [string]$Tag = '0.2.1',
+    [string]$Tag = '0.2.2',
     [string]$Image = 'stylle/money-web',
     [string]$WslDistro = '',
     [string]$DockerConfig = ''

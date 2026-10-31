@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**v0.2.1 已发布：`stylle/money-web:0.2.1` / `latest`，支持 linux/amd64、linux/arm64。单容器部署，自动初始化应用数据卷后降权运行。[发布核验记录](docs/docker-release.json)。**
+**代码版本 v0.2.2：MagicPush 适配与自定义 Webhook。保持单容器部署；镜像发布状态见 [核验记录](docs/docker-release.json)。**
 
 代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
 
@@ -16,7 +16,7 @@
 - MA20/MA60、RSI、MACD、ATR、历史量比，多条件程序观察；AI 与程序模式独立开关。
 - 开盘后 30 分钟日报、盘中较昨收涨跌阈值、三市场日历、美股夏令时、静默/去重/重试/过期控制。
 - OpenAI 兼容 Chat Completions / Responses，密钥加密、限额、引用和仓位校验。
-- 通用 JSON Webhook，HMAC 签名与投递记录。
+- MagicPush 自动适配、自定义 JSON/文本模板与请求头、HMAC 签名和投递记录。
 - 单容器包含网页、API 和后台监控；SQLite、设置和加密密钥统一保存在持久数据卷。
 
 **初始没有模拟行情或预设持仓。现金为 100 份，AI 与程序建议默认关闭。**
@@ -40,7 +40,7 @@
 name: money-web
 services:
   money-web:
-    image: stylle/money-web:0.2.1 # 固定版本；latest 随发布更新
+    image: stylle/money-web:0.2.2 # 固定版本；latest 随发布更新
     restart: unless-stopped # 异常退出和宿主机重启后自动启动，手动停止除外
     ports:
       - "127.0.0.1:8080:8000" # 宿主机地址:网页端口:容器端口；局域网访问改为 8080:8000
@@ -61,7 +61,7 @@ docker compose ps
 
 本机打开 <http://localhost:8080>，输入 `APP_TOKEN`。局域网/NAS 访问把端口改为 `"8080:8000"`，再打开 `http://服务器IP:8080`；公网访问应使用 HTTPS 反向代理。共享访问口令需保密。
 
-- `image`：镜像与版本；固定 `0.2.1` 方便复现，`latest` 随发布更新。
+- `image`：镜像与版本；固定 `0.2.2` 方便复现，`latest` 随发布更新。
 - `restart`：进程异常退出会由容器管理器退出整个容器，Docker 自动重启；网页或监控子进程不会默默消失。Docker 的 `unhealthy` 状态本身不会触发重启，需要监控平台介入。
 - `ports`：左侧是宿主机端口，右侧固定为容器的 `8000`。默认只接受本机访问。
 - `environment.APP_TOKEN`：网页访问口令，必须替换为至少 32 位随机字符。AI Key、Webhook 等在网页偏好设置里配置。
@@ -83,7 +83,7 @@ docker compose stop
 docker compose up -d
 ```
 
-始终保留同一个目录和 `name: money-web`，避免换项目名称后挂上一个新的空数据卷。源码构建可用 `docker build -t stylle/money-web:0.2.1 .`，然后运行同一份 Compose。
+始终保留同一个目录和 `name: money-web`，避免换项目名称后挂上一个新的空数据卷。源码构建可用 `docker build -t stylle/money-web:0.2.2 .`，然后运行同一份 Compose。
 
 ### 可选参数（按需添加）
 
@@ -131,7 +131,7 @@ NAS 若需沿用本机用户和组，在 `environment` 中按实际数字添加 
 
 `ERROR:root` 是日志名称，不代表进程身份。新版启动日志会报告失败阶段：`data-volume-initialization`（NAS ACL、只读挂载或初始化能力）、`sqlite-lock-file`、`sqlite-advisory-lock`、`database-initialization`、`encryption-key`、`runtime-state-in-tmp`。
 
-从 0.2.0 更新：修改 Compose 的镜像为 `stylle/money-web:0.2.1`，保留原数据卷，运行 `docker compose pull` 和 `docker compose up -d`。开启 `read_only` 时必须保留可写 `/tmp`；使用 `cap_drop: [ALL]` 时需补上上方 `cap_add`。NAS ACL、只读存储或 NFS root_squash 无法由应用绕过，遇到这种情况需按明确的失败阶段调整 NAS 挂载设置或配置对应 PUID/PGID。
+从 0.2.0 更新：修改 Compose 的镜像为 `stylle/money-web:0.2.2`，保留原数据卷，运行 `docker compose pull` 和 `docker compose up -d`。开启 `read_only` 时必须保留可写 `/tmp`；使用 `cap_drop: [ALL]` 时需补上上方 `cap_add`。NAS ACL、只读存储或 NFS root_squash 无法由应用绕过，遇到这种情况需按明确的失败阶段调整 NAS 挂载设置或配置对应 PUID/PGID。
 
 ### 从 v0.1 三容器部署继续使用
 
@@ -191,27 +191,52 @@ API 和 worker 的工作目录、DATABASE_URL、DATA_DIR 必须一致。无 APP_
 标的阈值在自选页面底部“管理订阅与异常阈值”设置。默认 ±5%，10% 是第二档，同方向同档每天一次。分时图为最近交易日，不代表今日仍在开盘。
 现金预算在同批程序建议之间共享；不会把尚未执行的减仓当作可用资金。跨次生成的提示仍基于当时持仓快照，操作后需及时更新。
 
-## Webhook 协议
+## Webhook 与 MagicPush
 
-请求为 UTF-8 JSON：
+### MagicPush 配置
+
+参照 [电影项目的模板实现](https://github.com/Stylle/today-random-movie-web/blob/main/server/notify.go)，并按 [MagicPush 官方推送接口](https://github.com/magiccode1412/magicpush/blob/main/apps/website/guide/dev/api-reference.md) 适配。MagicPush 需要 `content` 正文，消息 `type` 使用 `text/markdown/html`；观澜事件的 `alert/daily/analysis` 不是它的消息格式。
+
+1. 在偏好设置中填写 MagicPush 的 `https://你的域名/api/push/接口令牌`，推送格式选 **MagicPush**，请求方法选 **POST**。
+2. 也可填写 `https://你的域名/api/push`，在 Authorization 中填写 `Bearer 接口令牌`。这里使用 MagicPush「接口管理」的推送令牌，不是登录密码或观澜的 HMAC 签名密钥。
+3. 点击 **保存并测试推送**。此按钮只保存推送设置，保留其他未提交的偏好。测试消息和后台日报/异常提醒使用相同适配器。
+4. 自动模式可识别标准 `/api/push` 路径；反向代理重写路径时请显式选择 MagicPush。旧通用接收器如也使用该路径，可选「观澜原始事件 JSON」保持原格式。
+
+请求会转换为以下结构，正文由真实事件生成，不调用 AI：
 
 ```json
-{
-  "id": "稳定事件ID",
-  "type": "alert",
-  "title": "某标的较昨收下跌 5.20%",
-  "timestamp": "2026-10-28T02:00:00+00:00",
-  "expires_at": "2026-10-28T02:15:00+00:00",
-  "data": {"price": 1.0, "change_pct": -5.2}
-}
+{"title":"观澜通知连接测试","content":"观澜通知连接测试\n时间：事件时间\nWebhook 已成功连接","type":"text"}
 ```
 
-示例字段不代表实际行情。消息类型包括 daily、alert、analysis、test。`data` 随类型变化。
+MagicPush 的 `/api/inbound/接口令牌` 是另一种入站映射接口，需要在 MagicPush 中启用并配置字段映射。普通推送建议使用 `/api/push/接口令牌`。NAS 内网 HTTP 地址还需按上文显式设置 `ALLOW_PRIVATE_ENDPOINTS=true`，不会自动放宽网络访问限制。
 
-请求头：`Idempotency-Key`、`X-InvestWatch-Timestamp`；配置签名密钥时附带 `X-InvestWatch-Signature: sha256=<hex>`，签名输入是 `timestamp + "." + 原始 JSON 字节`，算法为 HMAC-SHA256。接收端需验证时间戳并去重。
-通用格式不能直接保证适配每个机器人厂商；使用自己的接收器转换为对应消息格式。
+400 也可能来自无效令牌、接口禁用、未绑定渠道、关键词过滤或下游渠道失败。已知原因显示固定诊断，不回显上游正文、URL 或密钥；未知错误显示 HTTP 状态并引导查看 MagicPush 推送记录。HTTP 200 中 `success=false` 或部分渠道失败也会记作失败，不冒充成功。
 
-最多重试三次，静默期暂停，15 分钟过期。网络投递是至少一次，不能保证绝对不重复。测试消息立即发送，不受静默期限制。
+### 自定义 Webhook（与电影项目类似）
+
+选择「自定义正文模板」，可配置 POST / PUT / GET、JSON / 纯文本、自定义请求头。GET 仅支持 JSON 对象，会把字段编码到查询参数，保留 URL 已有查询参数；发送正文建议使用 POST。自定义请求头采用 JSON 字符串对象；签名、去重及 HTTP 传输头不可覆盖。Authorization 专用字段优先于自定义头中的同名字段。
+
+模板示例：
+
+```json
+{"title":"{{title}}","content":"{{text}}","type":"text"}
+```
+
+变量包括 `{{title}}`、`{{text}}` / `{{content}}`、`{{event}}`、`{{id}}`、`{{timestamp}}`、`{{fields}}` / `{{data}}`、`{{payload}}`。`event` 保留 alert/daily/analysis/test 事件类型；不要把 `{{event}}` 填入 MagicPush 的消息 `type`。`fields` 是事件数据对象，`payload` 是完整事件；JSON 中不加引号可保留结构，例如 `{"data":{{fields}}}`。字符串变量自动处理引号、反斜杠与换行；不执行表达式。保存时校验模板和请求头，非法配置不覆盖原设置。
+
+请求头和模板可能含 Token，保存在加密设置中，不在配置读取接口回显；未修改保留，填写完整内容替换，使用清除按钮可删除。模板选项只在自定义模式生效。纯文本留空模板时发送可读通知正文。
+
+### 保留原始事件 JSON
+
+选择「观澜原始事件 JSON」继续发送原格式：
+
+```json
+{"id":"稳定事件ID","type":"alert","title":"提醒标题","timestamp":"事件时间","expires_at":"过期时间","data":{"price":1.0,"change_pct":-5.2}}
+```
+
+示例不代表实际行情。消息类型为 daily、alert、analysis、test，`data` 随类型变化。Idempotency-Key 在格式转换后仍保持事件 ID。可选 `X-InvestWatch-Signature: sha256=<hex>` 使用 HMAC-SHA256，输入为 `X-InvestWatch-Timestamp + "." + 实际发送的正文原始字节`；GET 的正文为空。接收端需校验时间戳并去重。
+
+最多重试三次，静默期暂停，15 分钟过期。至少一次投递不能保证绝不重复；MagicPush 部分渠道成功后重试可能导致该渠道重复，请结合其推送记录核对。测试消息立即发送，不受静默期限制。协议模拟测试不等同于你的真实 MagicPush 账号/渠道已完成联调。
 
 ## 测试与诊断
 
@@ -236,18 +261,18 @@ python scripts/check_integrations.py
 本机 Docker 可用且已通过 `docker login` 登录目标账号后：
 
 ```powershell
-.\scripts\publish.ps1 -Tag 0.2.1
+.\scripts\publish.ps1 -Tag 0.2.2
 ```
 
 如果 Windows 没有 docker.exe，但已有 WSL 构建环境（本机为 `wusaqi-build`），可复用 Linux 内已登录的 Docker：
 
 ```powershell
-.\scripts\publish.ps1 -Tag 0.2.1 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
+.\scripts\publish.ps1 -Tag 0.2.2 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
 ```
 
 `-DockerConfig` 只传配置目录，不接收或输出 Token；登录时使用 `docker login --password-stdin`，不要把凭证放进项目或构建参数。`/run` 中的临时登录会随环境重启丢失，发布结束应清除。WSL 属于 Windows 管理员用户，受限账户看不到该发行版时需在该用户下执行。发布期间保持一个 WSL 终端打开，避免发行版空闲退出清除 `/run`。
 
-脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.2.1` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
+脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.2.2` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
 
 仓库还包含 `.github/workflows/ci.yml`：推送 main/PR 会测试和构建；发布 v* 标签或手动指定 publish 才推 Docker Hub。需在 GitHub 配置 `DOCKERHUB_TOKEN` Secret，用户名为 stylle。**公开 GitHub 仓库已建立；DOCKERHUB_TOKEN Secret 尚未配置，当前由本机授权发布。**
 
