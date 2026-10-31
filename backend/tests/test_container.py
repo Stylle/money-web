@@ -32,9 +32,9 @@ def test_external_database_start_does_not_reset_shared_leases():
 
 @pytest.mark.skipif(os.name != 'posix', reason='Linux container file locking')
 def test_same_sqlite_database_cannot_have_two_container_owners():
-    from app.container import database_owner
+    from app.container import database_owner, StartupError
     with database_owner():
-        with pytest.raises(BlockingIOError):
+        with pytest.raises(StartupError, match='sqlite-advisory-lock'):
             with database_owner():
                 pytest.fail('A second container took ownership')
     with database_owner():

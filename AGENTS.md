@@ -12,3 +12,5 @@
 - Update docs/PLAN.md when scope changes. Unimplemented roadmap features must stay explicitly marked.
 
 - Default releases use one container (web + worker + SQLite). Deployment docs and Docker Hub Overview must start with the same minimal commented Compose, followed by optional parameters. Preserve legacy data paths and explain upgrades.
+
+- Container may initialize only its dedicated data directory as root, then must drop groups/GID/UID before executing web/worker. Never recursively chown arbitrary mounts, follow links during repair, or keep runtime root.

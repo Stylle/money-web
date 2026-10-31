@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 import platform
+from app.bootstrap import drop_privileges
+drop_privileges()
 from fastapi.testclient import TestClient
 from app.main import app
 
