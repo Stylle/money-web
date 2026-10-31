@@ -1,12 +1,12 @@
 {
-  "checked_at": "2026-10-30T09:05:05.731962+00:00",
+  "checked_at": "2026-10-31T04:43:11.219612+00:00",
   "image": "stylle/money-web",
   "registry_verified": true,
   "tags_match": true,
   "tags": [
     {
-      "tag": "0.2.0",
-      "digest": "sha256:d4223467e092ad55479fec5b4f5efea85484a5d1a6653bd7f62e06b660eae0f2",
+      "tag": "0.2.1",
+      "digest": "sha256:8813a02c596f7de2d921c4bb157db11e0f1aec0efd026d62a0d0e6e219feb4c4",
       "platforms": [
         "linux/amd64",
         "linux/arm64"
@@ -14,52 +14,73 @@
     },
     {
       "tag": "latest",
-      "digest": "sha256:d4223467e092ad55479fec5b4f5efea85484a5d1a6653bd7f62e06b660eae0f2",
+      "digest": "sha256:8813a02c596f7de2d921c4bb157db11e0f1aec0efd026d62a0d0e6e219feb4c4",
       "platforms": [
         "linux/amd64",
         "linux/arm64"
       ]
     },
     {
-      "tag": "93d9d7c",
-      "digest": "sha256:d4223467e092ad55479fec5b4f5efea85484a5d1a6653bd7f62e06b660eae0f2",
+      "tag": "95a7391",
+      "digest": "sha256:8813a02c596f7de2d921c4bb157db11e0f1aec0efd026d62a0d0e6e219feb4c4",
       "platforms": [
         "linux/amd64",
         "linux/arm64"
       ]
     }
   ],
-  "image_source_commit": "93d9d7ce65667a05b1fbcdee2b5820f65475e1ea",
-  "architecture": "one container: supervisor + web + worker; SQLite WAL",
-  "linux_backend_tests_passed": 80,
-  "frontend_tests_passed": 8,
+  "image_source_commit": "95a73919ba74eeb5e82ba7fee1fff8811c4d3955",
+  "linux_backend_tests_passed": 87,
   "frontend_build_passed": true,
+  "github_ci": "https://github.com/Stylle/money-web/actions/runs/41169577068",
+  "github_ci_passed": true,
   "single_container_acceptance": {
-    "web_and_worker": true,
-    "nonroot_read_only": true,
+    "nonroot_runtime": true,
+    "runtime_capabilities_empty": true,
+    "read_only_hardened": true,
     "authentication": true,
-    "crypto_watch_crud": true,
-    "portfolio_unchanged": true,
+    "watch_crud": true,
     "restart_persistence": true,
     "child_failure_recovery": true,
-    "abandoned_lease_recovery": true,
+    "lease_recovery": true,
     "graceful_shutdown": true,
-    "user_data_mounted": false
+    "startup_code_unwritable_by_runtime": true
   },
-  "github_ci": "https://github.com/Stylle/money-web/actions/runs/41029996788",
-  "github_ci_passed": true,
-  "anonymous_manifest_verified": true,
-  "temporary_credentials_removed": true,
+  "nas_permission_acceptance": [
+    {
+      "uid": 10001,
+      "gid": 10001,
+      "root_owned_data_repaired": true,
+      "key_preserved": true,
+      "settings_decrypt": true,
+      "unrelated_files_unchanged": true,
+      "runtime_nonroot": true,
+      "runtime_capabilities_empty": true,
+      "read_only_hardened": true,
+      "healthy": true
+    },
+    {
+      "uid": 1026,
+      "gid": 100,
+      "root_owned_data_repaired": true,
+      "key_preserved": true,
+      "settings_decrypt": true,
+      "unrelated_files_unchanged": true,
+      "runtime_nonroot": true,
+      "runtime_capabilities_empty": true,
+      "read_only_hardened": true,
+      "healthy": true
+    }
+  ],
+  "arm64_bootstrap_emulated": {
+    "volume_initialization": true,
+    "nonroot": true,
+    "capabilities_empty": true,
+    "data_writable": true
+  },
+  "arm64_full_runtime_retested": false,
+  "arm64_native_hardware_tested": false,
   "dockerhub_overview_verified": true,
-  "arm64_emulated_runtime": {
-    "platform": "linux/arm64",
-    "emulated": true,
-    "registry_pull": true,
-    "web_health": true,
-    "worker_heartbeat": true,
-    "single_container": true,
-    "probe": "native host curl and read-only SQLite; emulated Python health probe exceeds 10-second timeout",
-    "default_healthcheck_timeout_passed": false
-  },
-  "arm64_native_hardware_tested": false
+  "temporary_credentials_removed": true,
+  "anonymous_manifest_verified": true
 }
