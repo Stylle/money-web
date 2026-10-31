@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**v0.2.3 已发布：`stylle/money-web:0.2.3` / `latest`，支持 linux/amd64、linux/arm64。新增统一出站代理、NAS 代理部署示例与无密钥网络诊断。[发布核验记录](docs/docker-release.json)。**
+**v0.2.4 待发布：修复持仓保存，新增当前行情观察的预览和手动推送测试。当前已发布 v0.2.3，见 [历史记录](docs/releases/0.2.3.json)。**
 
 代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
 
@@ -40,7 +40,7 @@
 name: money-web
 services:
   money-web:
-    image: stylle/money-web:0.2.3 # 固定版本；latest 随发布更新
+    image: stylle/money-web:0.2.4 # 固定版本；latest 随发布更新
     restart: unless-stopped # 异常退出和宿主机重启后自动启动，手动停止除外
     ports:
       - "127.0.0.1:8080:8000" # 宿主机地址:网页端口:容器端口；局域网访问改为 8080:8000
@@ -61,7 +61,7 @@ docker compose ps
 
 本机打开 <http://localhost:8080>，输入 `APP_TOKEN`。局域网/NAS 访问把端口改为 `"8080:8000"`，再打开 `http://服务器IP:8080`；公网访问应使用 HTTPS 反向代理。共享访问口令需保密。
 
-- `image`：镜像与版本；固定 `0.2.3` 方便复现，`latest` 随发布更新。
+- `image`：镜像与版本；固定 `0.2.4` 方便复现，`latest` 随发布更新。
 - `restart`：进程异常退出会由容器管理器退出整个容器，Docker 自动重启；网页或监控子进程不会默默消失。Docker 的 `unhealthy` 状态本身不会触发重启，需要监控平台介入。
 - `ports`：左侧是宿主机端口，右侧固定为容器的 `8000`。默认只接受本机访问。
 - `environment.APP_TOKEN`：网页访问口令，必须替换为至少 32 位随机字符。AI Key、Webhook 等在网页偏好设置里配置。
@@ -83,7 +83,7 @@ docker compose stop
 docker compose up -d
 ```
 
-始终保留同一个目录和 `name: money-web`，避免换项目名称后挂上一个新的空数据卷。源码构建可用 `docker build -t stylle/money-web:0.2.3 .`，然后运行同一份 Compose。
+始终保留同一个目录和 `name: money-web`，避免换项目名称后挂上一个新的空数据卷。源码构建可用 `docker build -t stylle/money-web:0.2.4 .`，然后运行同一份 Compose。
 
 ### 可选参数（按需添加）
 
@@ -167,7 +167,7 @@ NAS 若需沿用本机用户和组，在 `environment` 中按实际数字添加 
 
 `ERROR:root` 是日志名称，不代表进程身份。新版启动日志会报告失败阶段：`data-volume-initialization`（NAS ACL、只读挂载或初始化能力）、`sqlite-lock-file`、`sqlite-advisory-lock`、`database-initialization`、`encryption-key`、`runtime-state-in-tmp`。
 
-从 0.2.0 更新：修改 Compose 的镜像为 `stylle/money-web:0.2.3`，保留原数据卷，运行 `docker compose pull` 和 `docker compose up -d`。开启 `read_only` 时必须保留可写 `/tmp`；使用 `cap_drop: [ALL]` 时需补上上方 `cap_add`。NAS ACL、只读存储或 NFS root_squash 无法由应用绕过，遇到这种情况需按明确的失败阶段调整 NAS 挂载设置或配置对应 PUID/PGID。
+从 0.2.0 更新：修改 Compose 的镜像为 `stylle/money-web:0.2.4`，保留原数据卷，运行 `docker compose pull` 和 `docker compose up -d`。开启 `read_only` 时必须保留可写 `/tmp`；使用 `cap_drop: [ALL]` 时需补上上方 `cap_add`。NAS ACL、只读存储或 NFS root_squash 无法由应用绕过，遇到这种情况需按明确的失败阶段调整 NAS 挂载设置或配置对应 PUID/PGID。
 
 ### 从 v0.1 三容器部署继续使用
 
@@ -228,6 +228,17 @@ API 和 worker 的工作目录、DATABASE_URL、DATA_DIR 必须一致。无 APP_
 现金预算在同批程序建议之间共享；不会把尚未执行的减仓当作可用资金。跨次生成的提示仍基于当时持仓快照，操作后需及时更新。
 
 ## Webhook 与 MagicPush
+
+### 如何测试当前行情观察推送
+
+1. 在「我的持仓」保存比例快照，持仓与现金合计 100 份，并满足两位小数和仓位上限。v0.2.4 已修复合计正确仍报 `Extra inputs are not permitted` 的前端字段问题；升级后强制刷新网页，加载新版本。
+2. 在「偏好设置」配置 Webhook、选择通知市场，点击「保存全部设置」。原「保存并测试推送」只验证连接，并仅保存推送配置。
+3. 在「自选行情」刷新报价，再回到「偏好设置 → 推送与交易日 → 行情观察推送测试」，点击 **预览当前行情观察**。
+4. 核对报价、来源、报价时间、交易状态和刚保存的持仓份额，再点击 **发送行情观察测试**。MagicPush 会收到标题带「【测试】」的行情观察；成功或失败可到「提醒中心 → 推送测试」查看。
+
+预览不访问外部行情/推送服务；发送使用已保存的 Webhook、通知市场与最新缓存快照，自定义模板仍生效。手动测试不刷新行情、不调用 AI、不交易，也不占用当天正式日报名额。休市、缺失和过期数据明确标注，不会转成实时操作建议。
+
+手动测试点击后立即发送一次，即使当前不在开盘窗口、已关闭每日通知或处于静默时间；失败不自动重试。测试成功只说明这次快照投递成功，正式日报仍要求后台监控在线、通知开关已开启、对应市场已勾选及满足交易日/发送窗口。股票开盘后 30 分钟、加密货币北京时间 08:30，窗口 15 分钟。
 
 ### MagicPush 配置
 
@@ -297,18 +308,18 @@ python scripts/check_integrations.py
 本机 Docker 可用且已通过 `docker login` 登录目标账号后：
 
 ```powershell
-.\scripts\publish.ps1 -Tag 0.2.3
+.\scripts\publish.ps1 -Tag 0.2.4
 ```
 
 如果 Windows 没有 docker.exe，但已有 WSL 构建环境（本机为 `wusaqi-build`），可复用 Linux 内已登录的 Docker：
 
 ```powershell
-.\scripts\publish.ps1 -Tag 0.2.3 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
+.\scripts\publish.ps1 -Tag 0.2.4 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
 ```
 
 `-DockerConfig` 只传配置目录，不接收或输出 Token；登录时使用 `docker login --password-stdin`，不要把凭证放进项目或构建参数。`/run` 中的临时登录会随环境重启丢失，发布结束应清除。WSL 属于 Windows 管理员用户，受限账户看不到该发行版时需在该用户下执行。发布期间保持一个 WSL 终端打开，避免发行版空闲退出清除 `/run`。
 
-脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.2.3` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
+脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.2.4` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
 
 仓库还包含 `.github/workflows/ci.yml`：推送 main/PR 会测试和构建；发布 v* 标签或手动指定 publish 才推 Docker Hub。需在 GitHub 配置 `DOCKERHUB_TOKEN` Secret，用户名为 stylle。**公开 GitHub 仓库已建立；DOCKERHUB_TOKEN Secret 尚未配置，当前由本机授权发布。**
 

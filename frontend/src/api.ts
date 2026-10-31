@@ -1,3 +1,5 @@
+import type { Portfolio } from "./types";
+
 export class AuthError extends Error {}
 export class ConnectionError extends Error {}
 
@@ -46,7 +48,8 @@ export async function api<T>(
       const error = await response.json().catch(() => ({ detail: fallback }));
       throw new Error(
         Array.isArray(error.detail)
-          ? error.detail.map((x: { msg: string }) => x.msg).join("；")
+          ? error.detail.map((x: { msg: string; type?: string }) => x.type === "extra_forbidden"
+              ? "提交包含不支持的字段，请刷新页面后重试" : x.msg).join("；")
           : typeof error.detail === "string"
             ? error.detail
             : fallback,
@@ -73,4 +76,17 @@ export async function api<T>(
     clearTimeout(timeout);
     options.signal?.removeEventListener("abort", cancel);
   }
+}
+
+export function savePortfolio(p: Portfolio): Promise<Portfolio> {
+  // Response metadata and calculator/UI fields are never part of this contract.
+  return api<Portfolio>("/portfolio", "PUT", {
+    revision: p.revision,
+    positions: p.positions.map(({ watch_id, shares, target, cap }) => ({ watch_id, shares, target, cap })),
+    cash: p.cash,
+    min_cash: p.min_cash,
+    max_step: p.max_step,
+    risk: p.risk,
+    horizon: p.horizon,
+  });
 }

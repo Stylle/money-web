@@ -1,4 +1,5 @@
 import hashlib
+import asyncio
 import hmac
 import os
 import time
@@ -26,7 +27,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title='观澜 Invest Watch', version='0.2.3', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title='观澜 Invest Watch', version='0.2.4', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
 
 @app.middleware('http')
@@ -56,7 +57,7 @@ def health():
     try:
         with Session() as s:
             s.execute(select(1))
-        return {'status': 'ok', 'version': '0.2.3'}
+        return {'status': 'ok', 'version': '0.2.4'}
     except Exception:
         raise HTTPException(503, '数据库不可用')
 
@@ -257,6 +258,45 @@ async def test_webhook():
         return {'ok': True}
     except Exception as exc:
         raise HTTPException(502, safe_error(exc))
+
+
+def observation_preview_payload(config):
+    from .services import observation_test_payload
+    payload = observation_test_payload(config)
+    if not payload['data']['items']:
+        raise HTTPException(422, '已保存的通知市场中没有自选标的，请先添加自选并保存通知市场')
+    return payload
+
+
+@app.get('/api/webhook/observation-preview')
+def observation_preview():
+    from .webhooks import notification_text
+    payload = observation_preview_payload(get_config())
+    return {'text': notification_text(payload), 'timestamp': payload['timestamp'],
+            'count': len(payload['data']['items']), 'payload': payload}
+
+
+@app.post('/api/webhook/test-observation')
+async def test_observation():
+    config = get_config()
+    if not config['webhook_url']:
+        raise HTTPException(422, '请先保存 Webhook 地址')
+    payload = observation_preview_payload(config)
+    error = None
+    try:
+        await asyncio.wait_for(send_webhook(config, payload), timeout=20)
+    except Exception as exc:
+        error = safe_error(exc)
+    # Final records only: manual tests never enter the worker's retry queue and
+    # never reserve a scheduled daily key. A failed test can be retried by click.
+    with Session.begin() as session:
+        session.add(Event(id=payload['id'], kind='test', title=payload['title'],
+                          payload={**payload['data'], 'error': error}))
+        session.add(Delivery(id=payload['id'], payload=payload, attempts=1,
+                             status='failed' if error else 'sent', error=error))
+    if error:
+        raise HTTPException(502, error)
+    return {'ok': True, 'id': payload['id'], 'count': len(payload['data']['items'])}
 
 
 @app.post('/api/ai/analyze')

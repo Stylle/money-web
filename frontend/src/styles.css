@@ -1572,6 +1572,16 @@ label small {
   gap: 10px;
   margin-top: 20px;
 }
+.observation-test {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.observation-test textarea {
+  width: 100%;
+  resize: vertical;
+}
+
 .portfolio-layout {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);

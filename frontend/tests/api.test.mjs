@@ -1,6 +1,6 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { api, AuthError, ConnectionError } from "../src/api.ts";
+import { api, AuthError, ConnectionError, savePortfolio } from "../src/api.ts";
 
 const originalFetch = globalThis.fetch;
 let events;
@@ -106,4 +106,31 @@ test("validation errors stay readable", async () => {
       status: 422,
     });
   await assert.rejects(api("/portfolio", "PUT", {}), /份额必须合计 100/);
+});
+
+test("saving a GET portfolio snapshot sends editable fields only, including on repeat saves", async () => {
+  const snapshot = { revision: 0, updated_at: "2026-10-31T00:00:00+00:00",
+    positions: [{ watch_id: "US:QQQ", shares: "33.33", target: null, cap: 40, display: "not writable" }],
+    cash: "66.67", min_cash: 10, max_step: 1, risk: "balanced", horizon: "medium",
+    capital: 1000000, future_metadata: "read only" };
+  let revision = 0;
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, "/api/portfolio");
+    const body = JSON.parse(options.body);
+    assert.deepEqual(Object.keys(body).sort(), ["revision", "positions", "cash", "min_cash", "max_step", "risk", "horizon"].sort());
+    assert.deepEqual(Object.keys(body.positions[0]).sort(), ["watch_id", "shares", "target", "cap"].sort());
+    assert.equal(body.revision, revision);
+    assert.equal(body.cash, "66.67");
+    assert.equal(body.positions[0].shares, "33.33");
+    assert.ok(!options.body.includes("1000000"));
+    return new Response(JSON.stringify({ ...snapshot, ...body, revision: ++revision }));
+  };
+  const saved = await savePortfolio(snapshot);
+  assert.equal((await savePortfolio(saved)).revision, 2);
+  assert.equal(snapshot.revision, 0);
+});
+
+test("unexpected form fields produce a Chinese refresh hint", async () => {
+  globalThis.fetch = async () => new Response(JSON.stringify({ detail: [{ type: "extra_forbidden", msg: "Extra inputs are not permitted" }] }), { status: 422 });
+  await assert.rejects(api("/portfolio", "PUT", {}), /提交包含不支持的字段，请刷新页面后重试/);
 });

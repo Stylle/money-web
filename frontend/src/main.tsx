@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { version } from "../package.json";
 import { createRoot } from "react-dom/client";
 import {
   Activity,
@@ -28,8 +29,10 @@ import {
   Waves,
   X,
 } from "lucide-react";
-import { api, AuthError } from "./api";
+import { api, AuthError, savePortfolio } from "./api";
+import { portfolioIssue } from "./portfolio";
 import { SourcePanel } from "./SourcePanel";
+import { ObservationTest } from "./ObservationTest";
 import type {
   PricePoint,
   Dashboard,
@@ -409,7 +412,7 @@ function App() {
           <div className="avatar">我</div>
           <div>
             <b>个人投资空间</b>
-            <small>私有部署 · v0.2.2</small>
+            <small>私有部署 · v{version}</small>
           </div>
           <LockKeyhole size={15} />
         </div>
@@ -750,7 +753,7 @@ function App() {
                 onSave={(p) =>
                   run(
                     "portfolio",
-                    () => api("/portfolio", "PUT", p),
+                    () => savePortfolio(p),
                     "持仓比例已保存",
                   )
                 }
@@ -1566,7 +1569,8 @@ function PortfolioPage({
   useEffect(() => setP(structuredClone(d.portfolio)), [d.portfolio.revision]);
   const sum =
       Number(p.cash) + p.positions.reduce((a, x) => a + Number(x.shares), 0),
-    valid = Math.abs(sum - 100) < 0.00001;
+    issue = portfolioIssue(p),
+    valid = !issue;
   const update = (index: number, key: string, value: string) =>
     setP({
       ...p,
@@ -1781,7 +1785,7 @@ function PortfolioPage({
           <span className={valid ? "muted" : "down"}>
             {valid
               ? "合计正确，可保存"
-              : `请调整至 100 份，当前差额 ${fmt(100 - sum)} 份`}
+              : issue}
           </span>
           <button
             className="primary"
@@ -1807,8 +1811,8 @@ function PortfolioPage({
             <Allocation portfolio={p} watches={d.watchlist} />
           ) : (
             <Empty
-              title="等待份额平衡"
-              text="持仓与现金合计 100 份后显示预览。"
+              title="等待持仓校验通过"
+              text="份额合计、数值及仓位上限校验通过后显示预览。"
             />
           )}
           <p className="muted">
@@ -2019,6 +2023,7 @@ function EventsPage({
     ai: "AI 分析",
     portfolio: "持仓变更",
     data: "数据状态",
+    test: "推送测试",
   };
   return (
     <>
@@ -2473,6 +2478,7 @@ function SettingsPage({
           >
             保存并测试推送 <ArrowRight size={15} />
           </button>
+          <ObservationTest notify={notify} disabled={busy} />
         </section>
         <section className="card settings-card">
           <div className="card-heading">
