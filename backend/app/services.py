@@ -37,6 +37,44 @@ def portfolio_data():
         return {'revision': row.revision, **row.payload}
 
 
+def observation_data(group, portfolio, signals, state, recent_news, now):
+    """Shared scheduled/manual snapshot; never fetch data or invoke AI here."""
+    payload = {'market': state['market'], 'date': state['date'],
+               'portfolio_revision': portfolio['revision'], 'portfolio_updated_at': portfolio['updated_at'],
+               'cash': portfolio['cash'], 'items': [],
+               'news': [{'title': a.title, 'source': a.source, 'url': a.url, 'published': a.published} for a in recent_news]}
+    for watch in group:
+        quote = watch.quote or {}
+        payload['items'].append({'watch_id': watch.id, 'name': watch.name,
+            'market': watch.market, 'market_name': MARKETS[watch.market]['name'], 'market_status': state['status'],
+            'price': quote.get('price'), 'currency': quote.get('currency'), 'change_pct': quote.get('change_pct'),
+            'quote_at': quote.get('as_of'), 'source': quote.get('source'),
+            'data_valid': not watch.error and valid_live_quote(quote, state, now),
+            'error': watch.error, 'signal': signals[watch.id]})
+    return payload
+
+
+def observation_test_payload(config):
+    now = utcnow()
+    portfolio = portfolio_data()
+    with Session() as session:
+        watches = session.scalars(select(Watch).order_by(Watch.id)).all()
+        news = session.scalars(select(Article).where(Article.collected >= now-timedelta(hours=24)).order_by(Article.published.desc()).limit(8)).all()
+    signals = analyze_all(watches, portfolio, config['strategy_enabled'], now)
+    data = {'test': True, 'portfolio_revision': portfolio['revision'], 'portfolio_updated_at': portfolio['updated_at'],
+            'cash': portfolio['cash'], 'items': [], 'news': [],
+            'message': '手动行情观察测试：使用已保存的行情与持仓；不调用 AI，不占用正式日报名额。'}
+    for market in config['markets']:
+        group = [watch for watch in watches if watch.market == market]
+        if group:
+            part = observation_data(group, portfolio, signals, market_state(market, now), news, now)
+            data['items'].extend(part['items'])
+            data['news'] = part['news']
+    return {'id': hashlib.sha256(('observation-test:'+str(time.time_ns())).encode()).hexdigest(),
+            'type': 'daily', 'title': '【测试】当前行情观察', 'timestamp': now.isoformat(),
+            'expires_at': (now+timedelta(minutes=1)).isoformat(), 'data': data}
+
+
 def event_data(event):
     return {'id': event.id, 'created': event.created.isoformat(), 'kind': event.kind, 'title': event.title, 'payload': event.payload}
 
@@ -158,22 +196,19 @@ async def deliver_pending(config):
 
 async def daily_reports(config):
     from .ai import generate_report
+    now = utcnow()
     portfolio = portfolio_data()
     with Session() as s:
         watches = s.scalars(select(Watch)).all()
-        recent_news = s.scalars(select(Article).where(Article.collected>=utcnow()-timedelta(hours=24)).order_by(Article.published.desc()).limit(8)).all()
-    signals = analyze_all(watches, portfolio, config['strategy_enabled'])
+        recent_news = s.scalars(select(Article).where(Article.collected>=now-timedelta(hours=24)).order_by(Article.published.desc()).limit(8)).all()
+    signals = analyze_all(watches, portfolio, config['strategy_enabled'], now)
     for market in config['markets']:
-        state = market_state(market)
+        state = market_state(market, now)
         group = [w for w in watches if w.market == market]
         if not state['daily_due'] or not group or not config['notify_daily']:
             continue
         key = f'daily:{market}:{state["date"]}'
-        payload = {'market': market, 'date': state['date'], 'portfolio_revision': portfolio['revision'], 'items': [],
-                   'news': [{'title': a.title, 'source': a.source, 'url': a.url, 'published': a.published} for a in recent_news]}
-        for w in group:
-            q = w.quote or {}
-            payload['items'].append({'watch_id': w.id, 'name': w.name, 'price': q.get('price'), 'change_pct': q.get('change_pct'), 'quote_at': q.get('as_of'), 'data_valid': not w.error and valid_live_quote(q, state), 'error': w.error, 'signal': signals[w.id]})
+        payload = observation_data(group, portfolio, signals, state, recent_news, now)
         # Reserve and send base report before potentially slow AI calls.
         label = '每日观察 · UTC 00:30' if market == 'CRYPTO' else '开盘 30 分钟观察'
         emitted = emit(key, 'daily', f'{MARKETS[market]["name"]} · {label}', payload, config, True)

@@ -50,16 +50,32 @@ def notification_text(payload):
         return '\n'.join(lines)
     if data.get('message'):
         lines.append(str(data['message']))
+    if 'cash' in data:
+        lines.append('现金 '+str(data['cash'])+' 份（总资金 100 份）；持仓为手动快照')
     def item_text(item):
         parts = [str(item.get('name') or item.get('watch_id') or '')]
+        if item.get('market_name'):
+            parts.append(str(item['market_name']))
+        if item.get('market_status'):
+            parts.append({'open': '交易中', 'closed': '非交易时段', 'holiday': '休市', 'break': '午间休市', 'unknown': '交易日历待确认'}.get(item['market_status'], '交易状态待确认'))
         if item.get('price') is not None:
             parts.append('价格 '+str(item['price'])+(' '+str(item['currency']) if item.get('currency') else ''))
+        else:
+            parts.append('暂无可用报价')
         if item.get('change_pct') is not None:
             parts.append('涨跌幅 '+str(item['change_pct'])+'%')
         if item.get('data_valid') is False:
             parts.append('数据不可用或过期，仅供查看')
+        if 'quote_at' in item:
+            parts.append('报价时间 '+str(item.get('quote_at') or '未知'))
+        if item.get('source'):
+            parts.append('来源 '+str(item['source']))
+        if item.get('error'):
+            parts.append(str(item['error']))
         signal = item.get('signal') or {}
         if isinstance(signal, dict):
+            if 'held' in signal:
+                parts.append('持仓 '+str(signal['held'])+' 份')
             if signal.get('action_label'):
                 parts.append(str(signal['action_label']))
             if signal.get('delta'):

@@ -74,6 +74,21 @@ def main():
         assert any(w['id']=='CRYPTO:BTC-USDT' for w in api('dashboard')['watchlist'])
         api('watchlist/CRYPTO:BTC-USDT',method='DELETE')
         assert not api('dashboard')['watchlist']
+        # Exercise the real snapshot write/read contract and preserve an edited
+        # decimal allocation across subsequent restart/fault recovery checks.
+        api('watchlist', watch, 'POST')
+        editable = {'revision','positions','cash','min_cash','max_step','risk','horizon'}
+        body = {key: value for key, value in api('portfolio').items() if key in editable}
+        body.update(cash='66.67', positions=[{'watch_id':'CRYPTO:BTC-USDT','shares':'33.33','target':None,'cap':40}])
+        saved = api('portfolio', body, 'PUT')
+        assert saved['revision']==1 and float(saved['cash'])==66.67
+        initial = api('portfolio', {key:value for key,value in saved.items() if key in editable}, 'PUT')
+        assert initial['revision']==2 and float(initial['positions'][0]['shares'])==33.33
+        api('settings', {'markets':['CRYPTO']}, 'PUT')
+        preview = api('webhook/observation-preview')
+        assert preview['count']==1 and preview['payload']['data']['test']
+        assert '33.33' in preview['text'] and '66.67' in preview['text']
+        api('settings', {'markets':[]}, 'PUT')
         assert len(api('sources')['news'])==9
         assert len(api('settings')['markets'])==0
         print('API, authentication, watchlist and SQLite checks passed; checking restart...',flush=True)
@@ -114,7 +129,8 @@ def main():
         report = {'single_container':True,'sqlite':True,'web':True,'worker':True,'nonroot':True,'read_only':True,
                   'authentication':True,'crypto_watch_crud':True,'portfolio_unchanged':True,
                   'restart_persistence':True,'child_failure_recovery':True,'lease_recovery':True,
-                  'graceful_shutdown':True,'user_data_mounted':False}
+                  'graceful_shutdown':True,'snapshot_repeated_decimal_save':True,
+                  'observation_preview_reads_saved_positions':True,'user_data_mounted':False}
         print(json.dumps(report),flush=True)
     finally:
         # Explicit random Compose project owns every volume removed here.
