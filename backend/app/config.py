@@ -8,6 +8,8 @@ DEFAULTS = {
     'ai_base_url': 'https://api.openai.com/v1', 'ai_key': '', 'ai_model': '',
     'ai_interface': 'chat', 'ai_daily_limit': 10,
     'webhook_url': '', 'webhook_secret': '', 'webhook_authorization': '',
+    'webhook_format': 'auto', 'webhook_method': 'POST', 'webhook_body_type': 'json',
+    'webhook_headers': '', 'webhook_body_tpl': '',
     'notify_daily': True, 'notify_alerts': True,
     'markets': ['CN', 'HK', 'US', 'CRYPTO'], 'quiet_start': '', 'quiet_end': '',
     'keywords': ['纳斯达克', '红利', '利率', '科技', 'Nasdaq', 'Federal Reserve'],
@@ -15,7 +17,7 @@ DEFAULTS = {
     'news_sources': ['cls','stcn','jin10','wallstreetcn','tradingview','seekingalpha','cointelegraph','coindesk'],
     'provider': 'auto', 'provider_base_url': '', 'provider_key': '',
 }
-SECRETS = {'ai_key', 'webhook_secret', 'webhook_authorization', 'provider_key'}
+SECRETS = {'ai_key', 'webhook_secret', 'webhook_authorization', 'provider_key', 'webhook_headers', 'webhook_body_tpl'}
 
 
 def cipher():

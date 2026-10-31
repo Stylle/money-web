@@ -1,7 +1,7 @@
 name: money-web
 services:
   money-web:
-    image: stylle/money-web:0.2.1 # 固定版本；latest 随发布更新
+    image: stylle/money-web:0.2.2 # 固定版本；latest 随发布更新
     restart: unless-stopped # 异常退出和宿主机重启后自动启动，手动停止除外
     ports:
       - "127.0.0.1:8080:8000" # 宿主机地址:网页端口:容器端口；局域网访问改为 8080:8000

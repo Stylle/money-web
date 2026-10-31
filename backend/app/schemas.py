@@ -77,6 +77,11 @@ class SettingsInput(StrictModel):
     webhook_url: str | None = Field(default=None, max_length=2000)
     webhook_secret: str | None = Field(default=None, max_length=1000)
     webhook_authorization: str | None = Field(default=None, max_length=1000)
+    webhook_format: Literal['auto', 'raw', 'magicpush', 'custom'] | None = None
+    webhook_method: Literal['POST', 'PUT', 'GET'] | None = None
+    webhook_body_type: Literal['json', 'text'] | None = None
+    webhook_headers: str | None = Field(default=None, max_length=12000)
+    webhook_body_tpl: str | None = Field(default=None, max_length=24000)
     notify_daily: bool | None = None
     notify_alerts: bool | None = None
     markets: list[Literal['CN', 'HK', 'US', 'CRYPTO']] | None = Field(default=None, max_length=4)
