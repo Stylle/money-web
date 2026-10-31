@@ -13,8 +13,8 @@ COPY backend/requirements.lock ./requirements.lock
 RUN pip install --no-cache-dir --no-compile -r requirements.lock \
     && groupadd --gid 10001 app && useradd --uid 10001 --gid app --create-home app \
     && mkdir /data && chown app:app /data
-COPY --chown=app:app backend/app ./app
-COPY --from=web --chown=app:app /web/dist ./web
+COPY --chown=root:root backend/app ./app
+COPY --from=web --chown=root:root /web/dist ./web
 USER root
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 CMD ["python", "-m", "app.healthcheck"]
