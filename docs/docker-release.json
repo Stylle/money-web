@@ -1,12 +1,12 @@
 {
-  "checked_at": "2026-10-31T06:10:25.186994+00:00",
+  "checked_at": "2026-10-31T06:56:25.518309+00:00",
   "image": "stylle/money-web",
   "registry_verified": true,
   "tags_match": true,
   "tags": [
     {
-      "tag": "0.2.3",
-      "digest": "sha256:cd1577dc5d93c6c8e86dd84b54f3536473312cb056b1afaaf18f1f4a85a64fa5",
+      "tag": "0.2.4",
+      "digest": "sha256:76d065b73ea8537a8bfb2c489b24b1c87682bf22bec452005fa5cdc753ec1553",
       "platforms": [
         "linux/amd64",
         "linux/arm64"
@@ -14,31 +14,32 @@
     },
     {
       "tag": "latest",
-      "digest": "sha256:cd1577dc5d93c6c8e86dd84b54f3536473312cb056b1afaaf18f1f4a85a64fa5",
+      "digest": "sha256:76d065b73ea8537a8bfb2c489b24b1c87682bf22bec452005fa5cdc753ec1553",
       "platforms": [
         "linux/amd64",
         "linux/arm64"
       ]
     },
     {
-      "tag": "5137c95",
-      "digest": "sha256:cd1577dc5d93c6c8e86dd84b54f3536473312cb056b1afaaf18f1f4a85a64fa5",
+      "tag": "464af18",
+      "digest": "sha256:76d065b73ea8537a8bfb2c489b24b1c87682bf22bec452005fa5cdc753ec1553",
       "platforms": [
         "linux/amd64",
         "linux/arm64"
       ]
     }
   ],
-  "image_source_commit": "5137c95f5c9eda9735376d352185422bf9e52224",
-  "linux_backend_tests_passed": 151,
-  "windows_backend_tests_passed": 145,
+  "image_source_commit": "464af18e0ef04670f6d314c8ea9490b76ce8b0db",
+  "linux_backend_tests_passed": 160,
+  "windows_backend_tests_passed": 154,
   "windows_backend_tests_skipped": 6,
-  "frontend_tests_passed": 8,
+  "frontend_tests_passed": 12,
   "frontend_clean_install_and_build_passed": true,
-  "github_ci": "https://github.com/Stylle/money-web/actions/runs/41175087631",
+  "github_ci": "https://github.com/Stylle/money-web/actions/runs/41178309721",
   "github_ci_passed": true,
   "anonymous_manifest_verified": true,
   "temporary_credentials_removed": true,
+  "dockerhub_overview_verified": true,
   "single_container_acceptance": {
     "web_and_worker": true,
     "nonroot_runtime": true,
@@ -49,29 +50,38 @@
     "child_failure_recovery": true,
     "lease_recovery": true,
     "graceful_shutdown": true,
-    "portfolio_unchanged": true,
-    "unreachable_proxy_and_empty_no_proxy_healthcheck": true,
+    "saved_decimal_portfolio_preserved": true,
+    "snapshot_repeated_save": true,
+    "observation_preview_reads_saved_positions": true,
+    "unreachable_proxy_healthcheck": true,
     "user_data_mounted": false
   },
-  "proxy_acceptance": {
-    "real_local_http_forward_proxy": true,
-    "real_local_https_connect_tls": true,
-    "tls_verification_retained": true,
-    "proxy_auth_not_forwarded_to_origin": true,
-    "http_and_connect_407_fixed_diagnostics": true,
-    "no_proxy_real_direct_connection": true,
-    "no_proxy_domain_port_ipv4_ipv6_cidr_boundaries": true,
-    "private_target_restrictions_retained": true,
-    "uppercase_lowercase_hyphen_environment_aliases": true,
-    "diagnostic_packaged_and_redacted": true,
-    "real_user_proxy_or_nas_contacted": false,
-    "real_ai_or_webhook_account_contacted": false
+  "portfolio_acceptance": {
+    "response_updated_at_omitted_from_writes": true,
+    "top_level_and_nested_writable_field_projection": true,
+    "capital_not_transmitted": true,
+    "strict_backend_validation_retained": true,
+    "decimal_sum_cap_blank_precision_validation": true,
+    "revision_conflicts_retained": true,
+    "browser_repeated_save_and_reload": true,
+    "browser_over_cap_save_disabled": true
+  },
+  "observation_test_acceptance": {
+    "preview_does_not_send_or_fetch": true,
+    "cached_quotes_and_saved_portfolio": true,
+    "missing_closed_and_stale_data_labels": true,
+    "quote_time_and_source": true,
+    "saved_notification_markets_respected": true,
+    "magicpush_raw_and_custom_adapter_tested": true,
+    "no_ai_calls": true,
+    "manual_test_ignores_window_quiet_and_notify_toggle": true,
+    "independent_daily_deduplication": true,
+    "terminal_delivery_records_no_automatic_retry": true,
+    "safe_failure_diagnostics": true,
+    "authentication": true,
+    "browser_preview_verified": true,
+    "real_user_push_channel_contacted": false
   },
   "arm64_full_runtime_retested": false,
-  "arm64_native_hardware_tested": false,
-  "dockerhub_overview_verified": true,
-  "references": {
-    "httpx_proxies": "https://www.python-httpx.org/advanced/proxies/",
-    "docker_host_gateway": "https://docs.docker.com/compose/how-tos/networking/"
-  }
+  "arm64_native_hardware_tested": false
 }

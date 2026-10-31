@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**v0.2.4 待发布：修复持仓保存，新增当前行情观察的预览和手动推送测试。当前已发布 v0.2.3，见 [历史记录](docs/releases/0.2.3.json)。**
+**v0.2.4 已发布：`stylle/money-web:0.2.4` / `latest`，支持 linux/amd64、linux/arm64。修复持仓快照保存，新增当前行情观察预览与手动推送测试。[发布核验记录](docs/docker-release.json)。**
 
 代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
 
