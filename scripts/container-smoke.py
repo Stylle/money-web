@@ -50,7 +50,7 @@ def main():
         assert len(run(compose+['ps','-q']).splitlines()) == 1
         port = inspected['NetworkSettings']['Ports']['8000/tcp'][0]['HostPort']
         base = 'http://127.0.0.1:'+port
-        status = run(['docker','exec',web,'cat','/proc/1/status'])
+        status = run(['docker','exec','--user','10001:10001',web,'cat','/proc/1/status'])
         assert all(int(value)==10001 for value in next(line for line in status.splitlines() if line.startswith('Uid:')).split()[1:])
         assert int(next(line for line in status.splitlines() if line.startswith('CapEff:')).split()[1],16)==0
         assert inspected['HostConfig']['ReadonlyRootfs']
@@ -89,9 +89,9 @@ def main():
         assert api('dashboard')['worker_heartbeat']
         print('Checking child failure, container recovery and abandoned lease reset...',flush=True)
         # Mark an abandoned lease, kill just the worker, then require automatic restart.
-        run(['docker','exec',web,'python','-c',"from app.db import Session,Lease; s=Session(); r=s.get(Lease,'worker'); r.until=9999999999; s.commit()"])
+        run(['docker','exec','--user','10001:10001',web,'python','-c',"from app.db import Session,Lease; s=Session(); r=s.get(Lease,'worker'); r.until=9999999999; s.commit()"])
         before = restarted['RestartCount']
-        run(['docker','exec',web,'python','-c',"import json,os,signal; os.kill(json.load(open('/tmp/money-web-runtime.json'))['worker'],signal.SIGKILL)"])
+        run(['docker','exec','--user','10001:10001',web,'python','-c',"import json,os,signal; os.kill(json.load(open('/tmp/money-web-runtime.json'))['worker'],signal.SIGKILL)"])
         deadline = time.monotonic()+120
         while True:
             restarted = json.loads(run(['docker','inspect',web]))[0]
@@ -101,7 +101,7 @@ def main():
         base = 'http://127.0.0.1:'+restarted['NetworkSettings']['Ports']['8000/tcp'][0]['HostPort']
         assert api('portfolio')==initial
         assert api('settings')['news_sources']==[]
-        run(['docker','exec',web,'python','-c',"from app.db import Session,Lease; s=Session(); assert s.get(Lease,'worker').until<9999999999"])
+        run(['docker','exec','--user','10001:10001',web,'python','-c',"from app.db import Session,Lease; s=Session(); assert s.get(Lease,'worker').until<9999999999"])
         # SIGTERM must stop both children promptly and leave a successful exit.
         started = time.monotonic()
         run(compose+['stop','-t','12','money-web'])
