@@ -53,6 +53,8 @@ def main():
         status = run(['docker','exec','--user','10001:10001',web,'cat','/proc/1/status'])
         assert all(int(value)==10001 for value in next(line for line in status.splitlines() if line.startswith('Uid:')).split()[1:])
         assert int(next(line for line in status.splitlines() if line.startswith('CapEff:')).split()[1],16)==0
+        run(['docker','exec','--user','10001:10001',web,'python','-c',
+             "import os; assert not os.access('/app/app/bootstrap.py',os.W_OK); assert not os.access('/app/app',os.W_OK)"])
         assert inspected['HostConfig']['ReadonlyRootfs']
         assert api('health')['status']=='ok'
         with urllib.request.urlopen(base+'/',timeout=10) as r:assert '\u89c2\u6f9c' in r.read().decode()
