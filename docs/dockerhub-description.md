@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**v0.2.0 已发布：`stylle/money-web:0.2.0` / `latest`，支持 linux/amd64、linux/arm64，默认单容器部署。[发布核验记录](https://github.com/Stylle/money-web/blob/main/docs/docker-release.json)。**
+**v0.2.1 已发布：`stylle/money-web:0.2.1` / `latest`，支持 linux/amd64、linux/arm64。单容器部署，自动初始化应用数据卷后降权运行。[发布核验记录](https://github.com/Stylle/money-web/blob/main/docs/docker-release.json)。**
 
 代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
 
@@ -40,7 +40,7 @@
 name: money-web
 services:
   money-web:
-    image: stylle/money-web:0.2.0 # 固定版本；latest 随发布更新
+    image: stylle/money-web:0.2.1 # 固定版本；latest 随发布更新
     restart: unless-stopped # 异常退出和宿主机重启后自动启动，手动停止除外
     ports:
       - "127.0.0.1:8080:8000" # 宿主机地址:网页端口:容器端口；局域网访问改为 8080:8000
@@ -61,7 +61,7 @@ docker compose ps
 
 本机打开 <http://localhost:8080>，输入 `APP_TOKEN`。局域网/NAS 访问把端口改为 `"8080:8000"`，再打开 `http://服务器IP:8080`；公网访问应使用 HTTPS 反向代理。共享访问口令需保密。
 
-- `image`：镜像与版本；固定 `0.2.0` 方便复现，`latest` 随发布更新。
+- `image`：镜像与版本；固定 `0.2.1` 方便复现，`latest` 随发布更新。
 - `restart`：进程异常退出会由容器管理器退出整个容器，Docker 自动重启；网页或监控子进程不会默默消失。Docker 的 `unhealthy` 状态本身不会触发重启，需要监控平台介入。
 - `ports`：左侧是宿主机端口，右侧固定为容器的 `8000`。默认只接受本机访问。
 - `environment.APP_TOKEN`：网页访问口令，必须替换为至少 32 位随机字符。AI Key、Webhook 等在网页偏好设置里配置。
@@ -83,7 +83,7 @@ docker compose stop
 docker compose up -d
 ```
 
-始终保留同一个目录和 `name: money-web`，避免换项目名称后挂上一个新的空数据卷。源码构建可用 `docker build -t stylle/money-web:0.2.0 .`，然后运行同一份 Compose。
+始终保留同一个目录和 `name: money-web`，避免换项目名称后挂上一个新的空数据卷。源码构建可用 `docker build -t stylle/money-web:0.2.1 .`，然后运行同一份 Compose。
 
 ### 可选参数（按需添加）
 
@@ -96,6 +96,7 @@ docker compose up -d
 | `ALLOW_PRIVATE_ENDPOINTS` | `false` | 内网 AI/Webhook 必须显式设为 `true`；同时自行配置出口隔离 |
 | `ENCRYPTION_KEY` | 自动创建 `/data/secret.key` | 可选 Fernet 密钥；设置后必须独立安全备份，不能随意更换 |
 | `DATABASE_URL` | `sqlite:////data/invest.db` | 仅高级部署接外部 PostgreSQL 时使用；普通单容器部署不需要 |
+| `PUID` / `PGID` | `10001` / `10001` | 应用运行 UID/GID；NAS 需要沿用指定属主时可设置，必须为非零数字 |
 | `DATA_DIR` | `/data` | 数据目录；通常保持默认，与持久卷路径一致 |
 
 可选服务参数（与 `image` 同级）：
@@ -106,6 +107,8 @@ docker compose up -d
     tmpfs:
       - /tmp:size=64M,mode=1777
     cap_drop: [ALL]
+    # 初始化数据卷及降权需要；运行进程降权后不保留这些能力
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID]
     security_opt: ["no-new-privileges:true"]
     # 可选限制，按订阅量和宿主机资源调整
     mem_limit: 1g
@@ -119,6 +122,16 @@ docker compose up -d
       APP_TOKEN: "替换为你的随机口令"
       TRUSTED_EGRESS_HOSTS: "query1.finance.yahoo.com,query2.finance.yahoo.com,qt.gtimg.cn,web.ifzq.gtimg.cn,push2.eastmoney.com,push2his.eastmoney.com,m.cls.cn,www.cls.cn,www.stcn.com,xnews.jin10.com,api-one.wallstcn.com,www.tradingview.com,seekingalpha.com,www.federalreserve.gov,data-api.binance.vision,api.exchange.coinbase.com,www.coindesk.com,cointelegraph.com"
 ```
+
+### NAS 权限与启动报错
+
+v0.2.1 启动时先准备应用数据目录和数据库/密钥文件，再降权运行网页与监控。无需手动匹配默认 UID 10001；保留文件内容，只处理应用自身文件，不递归修改其他目录，不跟随符号链接或硬链接。运行进程不保留 root 权限。
+
+NAS 若需沿用本机用户和组，在 `environment` 中按实际数字添加 `PUID: "1026"`、`PGID: "100"`（仅示例）。不要设置 `user: root` 来长期运行服务。显式 `user: "1026:100"` 会跳过初始化，此时目录须已允许该用户访问。
+
+`ERROR:root` 是日志名称，不代表进程身份。新版启动日志会报告失败阶段：`data-volume-initialization`（NAS ACL、只读挂载或初始化能力）、`sqlite-lock-file`、`sqlite-advisory-lock`、`database-initialization`、`encryption-key`、`runtime-state-in-tmp`。
+
+从 0.2.0 更新：修改 Compose 的镜像为 `stylle/money-web:0.2.1`，保留原数据卷，运行 `docker compose pull` 和 `docker compose up -d`。开启 `read_only` 时必须保留可写 `/tmp`；使用 `cap_drop: [ALL]` 时需补上上方 `cap_add`。NAS ACL、只读存储或 NFS root_squash 无法由应用绕过，遇到这种情况需按明确的失败阶段调整 NAS 挂载设置或配置对应 PUID/PGID。
 
 ### 从 v0.1 三容器部署继续使用
 
@@ -223,18 +236,18 @@ python scripts/check_integrations.py
 本机 Docker 可用且已通过 `docker login` 登录目标账号后：
 
 ```powershell
-.\scripts\publish.ps1 -Tag 0.2.0
+.\scripts\publish.ps1 -Tag 0.2.1
 ```
 
 如果 Windows 没有 docker.exe，但已有 WSL 构建环境（本机为 `wusaqi-build`），可复用 Linux 内已登录的 Docker：
 
 ```powershell
-.\scripts\publish.ps1 -Tag 0.2.0 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
+.\scripts\publish.ps1 -Tag 0.2.1 -WslDistro wusaqi-build -DockerConfig /run/money-web-docker-auth
 ```
 
 `-DockerConfig` 只传配置目录，不接收或输出 Token；登录时使用 `docker login --password-stdin`，不要把凭证放进项目或构建参数。`/run` 中的临时登录会随环境重启丢失，发布结束应清除。WSL 属于 Windows 管理员用户，受限账户看不到该发行版时需在该用户下执行。发布期间保持一个 WSL 终端打开，避免发行版空闲退出清除 `/run`。
 
-脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.2.0` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
+脚本用 buildx 构建 linux/amd64 和 linux/arm64，推送 `stylle/money-web:0.2.1` 与 `latest`，随后核验 manifest。需要支持多架构的 builder / QEMU。
 
 仓库还包含 `.github/workflows/ci.yml`：推送 main/PR 会测试和构建；发布 v* 标签或手动指定 publish 才推 Docker Hub。需在 GitHub 配置 `DOCKERHUB_TOKEN` Secret，用户名为 stylle。**公开 GitHub 仓库已建立；DOCKERHUB_TOKEN Secret 尚未配置，当前由本机授权发布。**
 

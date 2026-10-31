@@ -14,3 +14,5 @@
 - Default releases use one container (web + worker + SQLite). Deployment docs and Docker Hub Overview must start with the same minimal commented Compose, followed by optional parameters. Preserve legacy data paths and explain upgrades.
 
 - Container may initialize only its dedicated data directory as root, then must drop groups/GID/UID before executing web/worker. Never recursively chown arbitrary mounts, follow links during repair, or keep runtime root.
+
+- Bootstrap code and web/backend application directories must be root-owned and unwritable by the runtime UID; protect root startup code across container restarts.
