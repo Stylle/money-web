@@ -1,0 +1,86 @@
+{
+  "checked_at": "2026-10-31T04:43:11.219612+00:00",
+  "image": "stylle/money-web",
+  "registry_verified": true,
+  "tags_match": true,
+  "tags": [
+    {
+      "tag": "0.2.1",
+      "digest": "sha256:8813a02c596f7de2d921c4bb157db11e0f1aec0efd026d62a0d0e6e219feb4c4",
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ]
+    },
+    {
+      "tag": "latest",
+      "digest": "sha256:8813a02c596f7de2d921c4bb157db11e0f1aec0efd026d62a0d0e6e219feb4c4",
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ]
+    },
+    {
+      "tag": "95a7391",
+      "digest": "sha256:8813a02c596f7de2d921c4bb157db11e0f1aec0efd026d62a0d0e6e219feb4c4",
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ]
+    }
+  ],
+  "image_source_commit": "95a73919ba74eeb5e82ba7fee1fff8811c4d3955",
+  "linux_backend_tests_passed": 87,
+  "frontend_build_passed": true,
+  "github_ci": "https://github.com/Stylle/money-web/actions/runs/41169577068",
+  "github_ci_passed": true,
+  "single_container_acceptance": {
+    "nonroot_runtime": true,
+    "runtime_capabilities_empty": true,
+    "read_only_hardened": true,
+    "authentication": true,
+    "watch_crud": true,
+    "restart_persistence": true,
+    "child_failure_recovery": true,
+    "lease_recovery": true,
+    "graceful_shutdown": true,
+    "startup_code_unwritable_by_runtime": true
+  },
+  "nas_permission_acceptance": [
+    {
+      "uid": 10001,
+      "gid": 10001,
+      "root_owned_data_repaired": true,
+      "key_preserved": true,
+      "settings_decrypt": true,
+      "unrelated_files_unchanged": true,
+      "runtime_nonroot": true,
+      "runtime_capabilities_empty": true,
+      "read_only_hardened": true,
+      "healthy": true
+    },
+    {
+      "uid": 1026,
+      "gid": 100,
+      "root_owned_data_repaired": true,
+      "key_preserved": true,
+      "settings_decrypt": true,
+      "unrelated_files_unchanged": true,
+      "runtime_nonroot": true,
+      "runtime_capabilities_empty": true,
+      "read_only_hardened": true,
+      "healthy": true
+    }
+  ],
+  "arm64_bootstrap_emulated": {
+    "volume_initialization": true,
+    "nonroot": true,
+    "capabilities_empty": true,
+    "data_writable": true
+  },
+  "arm64_full_runtime_retested": false,
+  "arm64_native_hardware_tested": false,
+  "dockerhub_overview_verified": true,
+  "temporary_credentials_removed": true,
+  "anonymous_manifest_verified": true
+}
