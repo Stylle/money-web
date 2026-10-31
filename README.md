@@ -2,7 +2,7 @@
 
 个人自部署投资观察平台：股票与加密现货自选、财经资讯、100 份持仓、确定性程序策略、可选 AI 分析与 Webhook 提醒。
 
-**代码版本 v0.2.2：MagicPush 适配与自定义 Webhook。保持单容器部署；镜像发布状态见 [核验记录](docs/docker-release.json)。**
+**v0.2.2 已发布：`stylle/money-web:0.2.2` / `latest`，支持 linux/amd64、linux/arm64。单容器部署，新增 MagicPush 适配与自定义 Webhook。[发布核验记录](docs/docker-release.json)。**
 
 代码仓库：[Stylle/money-web](https://github.com/Stylle/money-web) · 镜像：[Docker Hub](https://hub.docker.com/r/stylle/money-web)。
 
