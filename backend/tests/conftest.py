@@ -17,6 +17,10 @@ def pytest_sessionfinish(session, exitstatus):
 def database(monkeypatch):
     monkeypatch.delenv('APP_TOKEN', raising=False)
     monkeypatch.delenv('ALLOW_PRIVATE_ENDPOINTS', raising=False)
+    # Tests must never send traffic or mock credentials through a host proxy.
+    for name in ('HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY'):
+        for key in (name, name.lower(), name.replace('_', '-'), name.lower().replace('_', '-')):
+            monkeypatch.delenv(key, raising=False)
     Base.metadata.drop_all(engine)
     initialize()
     yield

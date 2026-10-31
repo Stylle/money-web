@@ -81,7 +81,7 @@ def test_healthcheck_rejects_stale_worker_even_when_web_is_alive():
     from app.healthcheck import check
     with Session.begin() as session:
         session.add(Config(key='worker_heartbeat', value=(utcnow()-timedelta(minutes=3)).isoformat()))
-    with patch('app.healthcheck.urllib.request.urlopen') as request:
-        request.return_value.__enter__.return_value.status = 200
+    with patch('app.healthcheck.urllib.request.build_opener') as opener:
+        opener.return_value.open.return_value.__enter__.return_value.status = 200
         with pytest.raises(RuntimeError, match='stale'):
             check()

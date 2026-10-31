@@ -53,3 +53,5 @@ v0.2.1 初始化只处理专用数据目录及已知 SQLite 文件/密钥，保�
 镜像内应用代码及网页资源由 root 持有，运行 UID 不可写，避免运行进程篡改下一次重启的初始化代码。
 
 Webhook 格式适配由 `webhooks.py` 负责，外发仍经 `security.request`；模板只替换固定变量，JSON 字符串转义、对象变量保留类型，禁止执行表达式。MagicPush 的消息 type 与内部事件 type 必须分开。测试与 outbox 共用适配器，HMAC 签实际外发字节。上游正文只用于内存中已知消息的固定分类，不能原文进入 API 错误、日志或投递记录。
+
+代理在 `security.proxy_route` 按目标协议和 NO_PROXY 选择，并显式传给 HTTPX；保留 trust_env=False，避免系统代理和隐式证书替换。只有部署环境可以配置代理，不允许网页请求覆盖代理。目标安全检查始终执行，代理失败不自动直连。代理异常只返回本地固定诊断，不回显远端 reason phrase 或认证信息。`app.networkcheck` 使用固定公共目标、不读保存的 API/Webhook 设置；容器健康检查强制无代理。测试需覆盖实际 HTTP 转发、HTTPS CONNECT/TLS 验证、代理认证隔离、NO_PROXY 边界及错误脱敏。
