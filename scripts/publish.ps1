@@ -26,7 +26,7 @@ try {
         $script:linuxProjectRoot = (& wsl.exe -d $WslDistro -u root --cd / --exec wslpath -a $projectRoot).Trim()
         if ($LASTEXITCODE -ne 0 -or $script:linuxProjectRoot -notmatch '^/') { throw 'Cannot resolve project path in WSL' }
     } elseif (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-        throw 'Docker CLI missing. For the existing Linux VM, pass -WslDistro example-build.'
+        throw 'Docker CLI missing. Pass -WslDistro <distribution-name> to use Docker in an accessible WSL distribution.'
     }
     Invoke-ReleaseDocker -DockerArguments @('info', '--format', '{{.ServerVersion}}')
     Invoke-ReleaseDocker -DockerArguments @('buildx', 'build', '--platform', 'linux/amd64,linux/arm64', '--tag', "${Image}:${Tag}", '--tag', "${Image}:latest", '--push', '.')
